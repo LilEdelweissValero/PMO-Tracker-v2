@@ -98,7 +98,7 @@ async function main() {
   const newComboCategories = [
     { category: "requested_by_name", label: "Requested By Name", values: [] as string[] },
     { category: "requested_by_dept", label: "Requested By Dept", values: [] as string[] },
-    { category: "pm_officer", label: "PM Officer", values: [] as string[] },
+    { category: "pm_officer", label: "PM Officer", values: ["Lil Valero", "Zelene Tolentino"] },
   ];
 
   for (const combo of newComboCategories) {

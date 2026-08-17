@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import Modal from "./Modal";
-
-const OTHER_SENTINEL = "__other__";
 
 interface Field {
   key: string;
@@ -190,8 +188,8 @@ function ComboField({
 }) {
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [otherValue, setOtherValue] = useState("");
   const fetched = useRef(false);
+  const listId = useId();
 
   useEffect(() => {
     if (fetched.current) return;
@@ -209,52 +207,36 @@ function ComboField({
     return () => { cancelled = true; };
   }, [configCategory]);
 
-  const isOther = value !== "" && !options.some((o) => o.value === value);
-
-  const handleChange = useCallback((raw: string) => {
-    if (raw === OTHER_SENTINEL) {
-      setOtherValue("");
-      onChange("");
-    } else {
-      onChange(raw);
-    }
-  }, [onChange]);
-
-  const handleOtherChange = useCallback((typed: string) => {
-    setOtherValue(typed);
-    onChange(typed);
-  }, [onChange]);
+  const persistIfNew = useCallback((typed: string) => {
+    const trimmed = typed.trim();
+    if (!trimmed || options.some((o) => o.value === trimmed)) return;
+    fetch("/api/config-value", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: configCategory, value: trimmed }),
+    }).catch(() => {});
+  }, [configCategory, options]);
 
   if (loading) {
     return <input type="text" value="" readOnly style={inputStyle} placeholder="Loading..." />;
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-      <select
-        value={isOther ? OTHER_SENTINEL : value}
-        onChange={(e) => handleChange(e.target.value)}
-        required={required && !otherValue}
+    <>
+      <input
+        type="text"
+        list={listId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={(e) => persistIfNew(e.target.value)}
+        required={required}
         style={inputStyle}
-      >
-        <option value="">Select...</option>
+      />
+      <datalist id={listId}>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
+          <option key={opt.value} value={opt.label} />
         ))}
-        <option value={OTHER_SENTINEL}>Other...</option>
-      </select>
-      {(isOther || value === "") && (
-        <input
-          type="text"
-          value={otherValue}
-          onChange={(e) => handleOtherChange(e.target.value)}
-          placeholder="Type a new value..."
-          required={required}
-          style={inputStyle}
-        />
-      )}
-    </div>
+      </datalist>
+    </>
   );
 }

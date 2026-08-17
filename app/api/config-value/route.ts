@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "category and value are required" }, { status: 400 });
   }
 
+  const existing = await prisma.configValue.findFirst({
+    where: { category: body.category, value: body.value },
+  });
+  if (existing) {
+    return NextResponse.json(existing, { status: 200 });
+  }
+
   const configValue = await prisma.configValue.create({
     data: {
       category: body.category,
