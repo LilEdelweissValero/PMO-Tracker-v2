@@ -162,27 +162,13 @@ export default function ProjectsPage() {
         title="New Project"
         fields={[
           { key: "name", label: "Project Name", required: true },
-          { key: "priority", label: "Priority", type: "select", options: [
-            { label: "Critical", value: "Critical" },
-            { label: "High", value: "High" },
-            { label: "Medium", value: "Medium" },
-            { label: "Low", value: "Low" },
-          ]},
-          { key: "scopeDescription", label: "Scope Description", type: "textarea" },
-          { key: "initiatedBy", label: "Initiated By", type: "select", options: [
-            { label: "System Owner", value: "System Owner" },
-            { label: "PMO", value: "PMO" },
-            { label: "Developer", value: "Developer" },
-            { label: "Higher Authority", value: "Higher Authority" },
-          ]},
-          { key: "requestedByName", label: "Requested By Name" },
-          { key: "requestedByDept", label: "Requested By Dept" },
-          { key: "requestType", label: "Request Type", type: "select", options: [
-            { label: "Enhancement", value: "Enhancement" },
-            { label: "New System", value: "New System" },
-            { label: "New Module", value: "New Module" },
-          ]},
-          { key: "pmOfficer", label: "PM Officer" },
+          { key: "priority", label: "Priority", type: "combo", configCategory: "priority", required: true },
+          { key: "scopeDescription", label: "Scope Description", type: "textarea", required: true },
+          { key: "initiatedBy", label: "Initiated By", type: "combo", configCategory: "initiated_by", required: true },
+          { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
+          { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
+          { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
+          { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
         ]}
         onSubmit={handleCreate}
       />

@@ -270,7 +270,13 @@ export default function ProjectDetailPage() {
             open={true}
             onClose={() => setEditingField(null)}
             title={`Edit ${editingField}`}
-            fields={[{ key: editingField, label: editingField, type: editingField === "scopeDescription" ? "textarea" : "text" }]}
+            fields={[{
+              key: editingField,
+              label: editingField,
+              type: (FIELD_TYPE_MAP[editingField]?.type as "text" | "textarea" | "combo") ?? "text",
+              configCategory: FIELD_TYPE_MAP[editingField]?.configCategory,
+              required: true,
+            }]}
             initialData={{ [editingField]: String((project as unknown as Record<string, unknown>)[editingField] ?? "") }}
             onSubmit={(data) => { updateProject(data); setEditingField(null); }}
           />
@@ -346,6 +352,21 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
+const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string }> = {
+  name: { type: "text" },
+  priority: { type: "combo", configCategory: "priority" },
+  scopeDescription: { type: "textarea" },
+  initiatedBy: { type: "combo", configCategory: "initiated_by" },
+  requestedByName: { type: "combo", configCategory: "requested_by_name" },
+  requestedByDept: { type: "combo", configCategory: "requested_by_dept" },
+  requestType: { type: "combo", configCategory: "request_type" },
+  pmOfficer: { type: "combo", configCategory: "pm_officer" },
+  systemName: { type: "text" },
+  specificModule: { type: "text" },
+  systemOwnerName: { type: "text" },
+  systemOwnerDept: { type: "text" },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

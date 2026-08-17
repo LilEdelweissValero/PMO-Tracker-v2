@@ -26,6 +26,9 @@ export default function AdminPage() {
     { key: "request_type", label: "Request Type" },
     { key: "initiated_by", label: "Initiated By" },
     { key: "ball_groups", label: "Ball Groups" },
+    { key: "requested_by_name", label: "Requested By Name" },
+    { key: "requested_by_dept", label: "Requested By Dept" },
+    { key: "pm_officer", label: "PM Officer" },
   ];
 
   useEffect(() => {

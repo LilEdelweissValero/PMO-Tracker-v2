@@ -93,6 +93,26 @@ async function main() {
   }
   console.log("Seeded ball_groups values");
 
+  const newComboCategories = [
+    { category: "requested_by_name", label: "Requested By Name", values: [] as string[] },
+    { category: "requested_by_dept", label: "Requested By Dept", values: [] as string[] },
+    { category: "pm_officer", label: "PM Officer", values: [] as string[] },
+  ];
+
+  for (const combo of newComboCategories) {
+    for (let i = 0; i < combo.values.length; i++) {
+      const existing = await prisma.configValue.findFirst({
+        where: { category: combo.category, value: combo.values[i] },
+      });
+      if (!existing) {
+        await prisma.configValue.create({
+          data: { category: combo.category, value: combo.values[i], sortOrder: i },
+        });
+      }
+    }
+    console.log(`Seeded ${combo.label} values`);
+  }
+
   console.log("Seed complete!");
 }
 

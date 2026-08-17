@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Modal from "./Modal";
+
+const OTHER_SENTINEL = "__other__";
 
 interface Field {
   key: string;
   label: string;
-  type?: "text" | "textarea" | "select" | "number";
+  type?: "text" | "textarea" | "select" | "number" | "combo";
   options?: { label: string; value: string }[];
+  configCategory?: string;
   required?: boolean;
 }
 
@@ -20,6 +23,17 @@ interface EntityFormModalProps {
   onSubmit: (data: Record<string, string | number>) => Promise<void> | void;
   wide?: boolean;
 }
+
+const inputStyle: React.CSSProperties = {
+  padding: "6px 10px",
+  border: "1px solid var(--rule)",
+  borderRadius: "var(--radius-md)",
+  backgroundColor: "var(--surface)",
+  color: "var(--ink-primary)",
+  fontSize: "13px",
+  fontFamily: "var(--font-sans)",
+  outline: "none",
+};
 
 export default function EntityFormModal({
   open,
@@ -77,33 +91,21 @@ export default function EntityFormModal({
                 onChange={(e) => updateField(field.key, e.target.value)}
                 required={field.required}
                 rows={3}
-                style={{
-                  padding: "6px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--ink-primary)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  outline: "none",
-                  resize: "vertical",
-                }}
+                style={{ ...inputStyle, resize: "vertical" }}
+              />
+            ) : field.type === "combo" && field.configCategory ? (
+              <ComboField
+                configCategory={field.configCategory}
+                value={(formData[field.key] as string) ?? ""}
+                onChange={(v) => updateField(field.key, v)}
+                required={field.required}
               />
             ) : field.type === "select" ? (
               <select
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(e) => updateField(field.key, e.target.value)}
                 required={field.required}
-                style={{
-                  padding: "6px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--ink-primary)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  outline: "none",
-                }}
+                style={inputStyle}
               >
                 <option value="">Select...</option>
                 {field.options?.map((opt) => (
@@ -118,16 +120,7 @@ export default function EntityFormModal({
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(e) => updateField(field.key, field.type === "number" ? Number(e.target.value) : e.target.value)}
                 required={field.required}
-                style={{
-                  padding: "6px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--ink-primary)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  outline: "none",
-                }}
+                style={inputStyle}
               />
             )}
           </div>
@@ -181,5 +174,87 @@ export default function EntityFormModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function ComboField({
+  configCategory,
+  value,
+  onChange,
+  required,
+}: {
+  configCategory: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [otherValue, setOtherValue] = useState("");
+  const fetched = useRef(false);
+
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+    let cancelled = false;
+    fetch(`/api/config-value?category=${configCategory}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) {
+          setOptions(data.map((c: { value: string }) => ({ label: c.value, value: c.value })));
+          setLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [configCategory]);
+
+  const isOther = value !== "" && !options.some((o) => o.value === value);
+
+  const handleChange = useCallback((raw: string) => {
+    if (raw === OTHER_SENTINEL) {
+      setOtherValue("");
+      onChange("");
+    } else {
+      onChange(raw);
+    }
+  }, [onChange]);
+
+  const handleOtherChange = useCallback((typed: string) => {
+    setOtherValue(typed);
+    onChange(typed);
+  }, [onChange]);
+
+  if (loading) {
+    return <input type="text" value="" readOnly style={inputStyle} placeholder="Loading..." />;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+      <select
+        value={isOther ? OTHER_SENTINEL : value}
+        onChange={(e) => handleChange(e.target.value)}
+        required={required && !otherValue}
+        style={inputStyle}
+      >
+        <option value="">Select...</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+        <option value={OTHER_SENTINEL}>Other...</option>
+      </select>
+      {(isOther || value === "") && (
+        <input
+          type="text"
+          value={otherValue}
+          onChange={(e) => handleOtherChange(e.target.value)}
+          placeholder="Type a new value..."
+          required={required}
+          style={inputStyle}
+        />
+      )}
+    </div>
   );
 }
