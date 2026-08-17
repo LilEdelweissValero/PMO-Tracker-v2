@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useId } from "react";
+import { useState, useEffect, useCallback, useId } from "react";
 import Modal from "./Modal";
 
 interface Field {
@@ -188,12 +188,9 @@ function ComboField({
 }) {
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const fetched = useRef(false);
   const listId = useId();
 
   useEffect(() => {
-    if (fetched.current) return;
-    fetched.current = true;
     let cancelled = false;
     fetch(`/api/config-value?category=${configCategory}`)
       .then((r) => r.json())
