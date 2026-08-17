@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import DetailHero from "@/components/DetailHero";
 import HealthBadge from "@/components/HealthBadge";
@@ -20,11 +20,8 @@ export default function ProjectDetailPage() {
   const [showBumpModal, setShowBumpModal] = useState<number | null>(null);
   const [bumpNote, setBumpNote] = useState("");
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
-  const fetched = useRef(false);
 
   useEffect(() => {
-    if (fetched.current) return;
-    fetched.current = true;
     let cancelled = false;
     fetch(`/api/project/${projectId}`)
       .then((r) => r.json())
@@ -33,7 +30,14 @@ export default function ProjectDetailPage() {
           const enriched = {
             ...data,
             workStreams: data.workStreams.map((ws: Record<string, unknown> & { flowStages: unknown[] }) =>
-              buildWorkStreamWithDerived({ ...ws, flowStages: ws.flowStages } as Parameters<typeof buildWorkStreamWithDerived>[0])
+              buildWorkStreamWithDerived({
+                ...ws,
+                flowStages: (ws.flowStages as Record<string, unknown>[]).map((s) => ({
+                  ...s,
+                  plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
+                  actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
+                })),
+              } as Parameters<typeof buildWorkStreamWithDerived>[0])
             ),
           };
           setProject(enriched);
@@ -53,7 +57,14 @@ export default function ProjectDetailPage() {
         const enriched = {
           ...data,
           workStreams: data.workStreams.map((ws: Record<string, unknown> & { flowStages: unknown[] }) =>
-            buildWorkStreamWithDerived({ ...ws, flowStages: ws.flowStages } as Parameters<typeof buildWorkStreamWithDerived>[0])
+            buildWorkStreamWithDerived({
+              ...ws,
+              flowStages: (ws.flowStages as Record<string, unknown>[]).map((s) => ({
+                ...s,
+                plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
+                actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
+              })),
+            } as Parameters<typeof buildWorkStreamWithDerived>[0])
           ),
         };
         setProject(enriched);
