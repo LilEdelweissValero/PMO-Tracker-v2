@@ -9,6 +9,8 @@ import LinkEditor from "@/components/LinkEditor";
 import Modal from "@/components/Modal";
 import EntityFormModal from "@/components/EntityFormModal";
 import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
+import { playPing, playPrompt } from "@/lib/sound";
+import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink } from "@/lib/types";
 
 export default function ProjectDetailPage() {
@@ -78,6 +80,8 @@ export default function ProjectDetailPage() {
       body: JSON.stringify(data),
     });
     refetch();
+    playPing();
+    showToast("Project updated");
   };
 
   const updateWorkStream = async (wsId: number, data: Record<string, string | number>) => {
@@ -87,6 +91,8 @@ export default function ProjectDetailPage() {
       body: JSON.stringify(data),
     });
     refetch();
+    playPing();
+    showToast("Work stream updated");
   };
 
   const logStage = async (stageId: number, actualDate: string) => {
@@ -96,6 +102,8 @@ export default function ProjectDetailPage() {
       body: JSON.stringify({ actualDate: actualDate || null }),
     });
     refetch();
+    playPing();
+    showToast("Stage logged");
   };
 
   const logBump = async (wsId: number) => {
@@ -112,6 +120,8 @@ export default function ProjectDetailPage() {
     setBumpNote("");
     setShowBumpModal(null);
     refetch();
+    playPing();
+    showToast("Bump logged");
   };
 
   const addWorkStream = async (data: Record<string, string | number>) => {
@@ -125,6 +135,8 @@ export default function ProjectDetailPage() {
       throw new Error(body?.error ?? `Failed to add work stream (${res.status})`);
     }
     refetch();
+    playPing();
+    showToast("Work stream added");
   };
 
   if (loading) {
@@ -167,9 +179,9 @@ export default function ProjectDetailPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-lg)", marginTop: "var(--space-lg)" }}>
         <Section title="Project Info">
-          <FieldRow label="Name" value={project.name} onEdit={() => setEditingField("name")} />
-          <FieldRow label="Priority" value={project.priority} onEdit={() => setEditingField("priority")} />
-          <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => setEditingField("scopeDescription")} multiline />
+          <FieldRow label="Name" value={project.name} onEdit={() => { playPrompt(); setEditingField("name"); }} />
+          <FieldRow label="Priority" value={project.priority} onEdit={() => { playPrompt(); setEditingField("priority"); }} />
+          <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => { playPrompt(); setEditingField("scopeDescription"); }} multiline />
           <div style={{ marginTop: "var(--space-sm)" }}>
             <div className="label-caps" style={{ marginBottom: "4px", color: "var(--ink-tertiary)" }}>References</div>
             <LinkEditor
@@ -180,21 +192,21 @@ export default function ProjectDetailPage() {
         </Section>
 
         <Section title="Initiated By">
-          <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => setEditingField("initiatedBy")} />
-          <FieldRow label="Requested By" value={project.requestedByName} onEdit={() => setEditingField("requestedByName")} />
-          <FieldRow label="Department" value={project.requestedByDept} onEdit={() => setEditingField("requestedByDept")} />
+          <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
+          <FieldRow label="Requested By" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
+          <FieldRow label="Department" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
         </Section>
 
         <Section title="System Info">
-          <FieldRow label="System" value={project.systemName} onEdit={() => setEditingField("systemName")} />
-          <FieldRow label="Module" value={project.specificModule} onEdit={() => setEditingField("specificModule")} />
-          <FieldRow label="Owner" value={project.systemOwnerName} onEdit={() => setEditingField("systemOwnerName")} />
-          <FieldRow label="Owner Dept" value={project.systemOwnerDept} onEdit={() => setEditingField("systemOwnerDept")} />
-          <FieldRow label="Request Type" value={project.requestType} onEdit={() => setEditingField("requestType")} />
+          <FieldRow label="System" value={project.systemName} onEdit={() => { playPrompt(); setEditingField("systemName"); }} />
+          <FieldRow label="Module" value={project.specificModule} onEdit={() => { playPrompt(); setEditingField("specificModule"); }} />
+          <FieldRow label="Owner" value={project.systemOwnerName} onEdit={() => { playPrompt(); setEditingField("systemOwnerName"); }} />
+          <FieldRow label="Owner Dept" value={project.systemOwnerDept} onEdit={() => { playPrompt(); setEditingField("systemOwnerDept"); }} />
+          <FieldRow label="Request Type" value={project.requestType} onEdit={() => { playPrompt(); setEditingField("requestType"); }} />
         </Section>
 
         <Section title="Assignment">
-          <FieldRow label="PM Officer" value={project.pmOfficer} onEdit={() => setEditingField("pmOfficer")} />
+          <FieldRow label="PM Officer" value={project.pmOfficer} onEdit={() => { playPrompt(); setEditingField("pmOfficer"); }} />
         </Section>
       </div>
 
@@ -202,7 +214,7 @@ export default function ProjectDetailPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-sm)" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 750 }}>Work Streams</h2>
           <button
-            onClick={() => setShowAddWorkStream(true)}
+            onClick={() => { playPrompt(); setShowAddWorkStream(true); }}
             style={{
               padding: "7px 12px",
               border: "none",
@@ -224,7 +236,7 @@ export default function ProjectDetailPage() {
             ws={ws}
             onUpdate={(data) => updateWorkStream(ws.id, data)}
             onLogStage={logStage}
-            onLogBump={() => setShowBumpModal(ws.id)}
+            onLogBump={() => { playPrompt(); setShowBumpModal(ws.id); }}
           />
         ))}
       </div>

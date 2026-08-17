@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { playPing } from "@/lib/sound";
+import { showToast } from "@/components/Toast";
 
 interface DirectoryItem {
   id: number;
@@ -62,6 +64,8 @@ export default function DirectoryPage() {
     setNewName("");
     setNewDetails("");
     fetchAll();
+    playPing();
+    showToast("Entry added");
   };
 
   const updateItem = async (id: number) => {
@@ -73,12 +77,16 @@ export default function DirectoryPage() {
     });
     setEditingId(null);
     fetchAll();
+    playPing();
+    showToast("Entry updated");
   };
 
   const deleteItem = async (id: number) => {
     const url = tab === "systems" ? `/api/directory-system/${id}` : `/api/directory-department/${id}`;
     await fetch(url, { method: "DELETE" });
     fetchAll();
+    playPing();
+    showToast("Entry deleted");
   };
 
   const items = tab === "systems" ? systems : departments;

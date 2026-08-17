@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { playPing } from "@/lib/sound";
+import { showToast } from "@/components/Toast";
 
 interface ConfigItem {
   id: number;
@@ -67,6 +69,8 @@ export default function AdminPage() {
     });
     setNewValue("");
     refetch();
+    playPing();
+    showToast("Value added");
   };
 
   const updateItem = async (id: number) => {
@@ -77,11 +81,15 @@ export default function AdminPage() {
     });
     setEditingId(null);
     refetch();
+    playPing();
+    showToast("Value updated");
   };
 
   const deleteItem = async (id: number) => {
     await fetch(`/api/config-value/${id}`, { method: "DELETE" });
     refetch();
+    playPing();
+    showToast("Value deleted");
   };
 
   const moveItem = async (id: number, direction: "up" | "down") => {

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import EntityFormModal from "@/components/EntityFormModal";
 import { computeAggregateStatus, getStatusColorClass } from "@/lib/feature";
+import { playPing, playPrompt } from "@/lib/sound";
+import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams } from "@/lib/types";
 
 export default function ProjectsPage() {
@@ -31,6 +33,8 @@ export default function ProjectsPage() {
       throw new Error(body?.error ?? `Failed to create project (${res.status})`);
     }
     fetchProjects();
+    playPing();
+    showToast("Project created");
   };
 
   if (loading) {
@@ -59,7 +63,7 @@ export default function ProjectsPage() {
           Projects
         </h1>
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={() => { playPrompt(); setShowCreate(true); }}
           style={{
             padding: "7px 12px",
             border: "none",
