@@ -11,7 +11,18 @@ import EntityFormModal from "@/components/EntityFormModal";
 import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink } from "@/lib/types";
+import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry } from "@/lib/types";
+
+const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+
+interface BumpState {
+  ws: WorkStreamWithStages;
+  bumpDate: string;
+  bumpMsg: string;
+  ballHolder: string;
+  progressChecked: boolean;
+  actualDate: string;
+}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -19,10 +30,29 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectWithWorkStreams | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [showBumpModal, setShowBumpModal] = useState<number | null>(null);
-  const [bumpNote, setBumpNote] = useState("");
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
   const [showManageSystems, setShowManageSystems] = useState(false);
+  const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
+  const [bumpState, setBumpState] = useState<BumpState | null>(null);
+  const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
+  const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
+  const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/config-value?category=ball_groups")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) {
+          const groups = (data as { value: string }[])
+            .map((c) => c.value)
+            .filter((v) => v.trim());
+          if (groups.length) setBallGroups(groups);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,33 +130,127 @@ export default function ProjectDetailPage() {
     showToast("Work stream updated");
   };
 
-  const logStage = async (stageId: number, actualDate: string) => {
+  const updateStage = async (stageId: number, data: Record<string, string | number | null>) => {
     await fetch(`/api/flow-stage/${stageId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ actualDate: actualDate || null }),
+      body: JSON.stringify(data),
     });
     refetch();
     playPing();
-    showToast("Stage logged");
   };
 
-  const logBump = async (wsId: number) => {
+  const addStage = async (data: Record<string, string | number | number[]>) => {
+    if (addStageWsId === null) return;
+    const res = await fetch("/api/flow-stage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workStreamId: addStageWsId, name: data.name }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? `Failed to add stage (${res.status})`);
+    }
+    setAddStageWsId(null);
+    refetch();
+    playPing();
+    showToast("Stage added");
+  };
+
+  const deleteStage = async (stageId: number) => {
+    await fetch(`/api/flow-stage/${stageId}`, { method: "DELETE" });
+    refetch();
+    playPing();
+    showToast("Stage deleted");
+  };
+
+  const reorderStage = async (wsId: number, stageId: number, direction: "up" | "down") => {
+    const ws = project?.workStreams.find((w) => w.id === wsId);
+    if (!ws) return;
+    const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
+    const idx = sorted.findIndex((s) => s.id === stageId);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+    await Promise.all([
+      fetch(`/api/flow-stage/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderIdx: b.orderIdx }),
+      }),
+      fetch(`/api/flow-stage/${b.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderIdx: a.orderIdx }),
+      }),
+    ]);
+    refetch();
+  };
+
+  const openBumpModal = (ws: WorkStreamWithStages) => {
+    const today = new Date().toISOString().split("T")[0];
+    setBumpState({
+      ws,
+      bumpDate: today,
+      bumpMsg: "",
+      ballHolder: ws.currentBall,
+      progressChecked: false,
+      actualDate: today,
+    });
+  };
+
+  const logBump = async () => {
+    if (!bumpState) return;
+    const { ws, bumpDate, bumpMsg, ballHolder, progressChecked, actualDate } = bumpState;
+    const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
+    const nextStage = sorted.find((s) => !s.actualDate) ?? null;
+    const progressedStage = progressChecked && nextStage ? nextStage : null;
+    const stageName = progressedStage?.name ?? ws.currentStage?.name ?? "Not Started";
+
     await fetch("/api/change-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        workStreamId: wsId,
+        workStreamId: ws.id,
         projectId,
         entryType: "bump",
-        note: bumpNote,
+        fieldName: stageName,
+        newValue: ballHolder,
+        note: bumpMsg,
+        bumpDate,
       }),
     });
-    setBumpNote("");
-    setShowBumpModal(null);
+
+    if (progressedStage && actualDate) {
+      await fetch(`/api/flow-stage/${progressedStage.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actualDate, note: bumpMsg }),
+      });
+    }
+
+    if (ballHolder !== ws.currentBall) {
+      await fetch(`/api/work-stream/${ws.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentBall: ballHolder }),
+      });
+    }
+
+    setBumpState(null);
     refetch();
     playPing();
     showToast("Bump logged");
+  };
+
+  const openBumpsModal = (ws: WorkStreamWithStages) => {
+    setBumpsWs(ws);
+    setBumpsList(null);
+    fetch(`/api/change-log?workStreamId=${ws.id}&entryType=bump`)
+      .then((r) => r.json())
+      .then((data) => setBumpsList(data as ChangeLogEntry[]))
+      .catch(() => setBumpsList([]));
   };
 
   const addWorkStream = async (data: Record<string, string | number | number[]>) => {
@@ -294,9 +418,15 @@ export default function ProjectDetailPage() {
           <WorkStreamCard
             key={ws.id}
             ws={ws}
-            onUpdate={(data) => updateWorkStream(ws.id, data)}
-            onLogStage={logStage}
-            onLogBump={() => { playPrompt(); setShowBumpModal(ws.id); }}
+            ballGroups={ballGroups}
+            onUpdateName={(name) => updateWorkStream(ws.id, { name })}
+            onUpdateBall={(ball) => updateWorkStream(ws.id, { currentBall: ball })}
+            onUpdateStage={(stageId, data) => updateStage(stageId, data)}
+            onReorderStage={(stageId, direction) => reorderStage(ws.id, stageId, direction)}
+            onDeleteStage={deleteStage}
+            onAddStage={() => { playPrompt(); setAddStageWsId(ws.id); }}
+            onBump={() => { playPrompt(); openBumpModal(ws); }}
+            onOpenBumps={() => openBumpsModal(ws)}
           />
         ))}
       </div>
@@ -351,58 +481,183 @@ export default function ProjectDetailPage() {
         )}
       </Modal>
 
-      <Modal open={showBumpModal !== null} onClose={() => setShowBumpModal(null)} title="Add Bump Note">
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-          <textarea
-            value={bumpNote}
-            onChange={(e) => setBumpNote(e.target.value)}
-            rows={3}
-            placeholder="Enter a note..."
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: "1px solid var(--rule)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "13px",
-              fontFamily: "var(--font-sans)",
-              resize: "vertical",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)" }}>
-            <button
-              onClick={() => setShowBumpModal(null)}
-              style={{
-                padding: "7px 12px",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "var(--surface)",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => showBumpModal && logBump(showBumpModal)}
-              disabled={!bumpNote.trim()}
-              style={{
-                padding: "7px 12px",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "var(--accent)",
-                color: "#FFFFFF",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-sans)",
-                opacity: bumpNote.trim() ? 1 : 0.5,
-              }}
-            >
-              Save Bump
-            </button>
+      <Modal open={bumpState !== null} onClose={() => setBumpState(null)} title="Add Bump">
+        {bumpState && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+            <div style={{ display: "flex", gap: "var(--space-md)" }}>
+              <DatePicker
+                label="Bump Date"
+                value={bumpState.bumpDate}
+                onChange={(d) => setBumpState({ ...bumpState, bumpDate: d })}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-tertiary)",
+                }}
+              >
+                Bump Msg
+              </label>
+              <textarea
+                value={bumpState.bumpMsg}
+                onChange={(e) => setBumpState({ ...bumpState, bumpMsg: e.target.value })}
+                rows={3}
+                placeholder="Enter bump message..."
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  border: "1px solid var(--rule)",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  resize: "vertical",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-tertiary)",
+                }}
+              >
+                Ball Holder
+              </label>
+              <select
+                value={bumpState.ballHolder}
+                onChange={(e) => setBumpState({ ...bumpState, ballHolder: e.target.value })}
+                style={{
+                  padding: "6px 10px",
+                  border: "1px solid var(--rule)",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  outline: "none",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--ink-primary)",
+                }}
+              >
+                {ballGroups.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", fontSize: "13px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={bumpState.progressChecked}
+                onChange={(e) => setBumpState({ ...bumpState, progressChecked: e.target.checked })}
+                style={{ cursor: "pointer" }}
+              />
+              Progress to next stage
+            </label>
+            {bumpState.progressChecked && (
+              <DatePicker
+                label="Actual Date"
+                value={bumpState.actualDate}
+                onChange={(d) => setBumpState({ ...bumpState, actualDate: d })}
+              />
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)" }}>
+              <button
+                onClick={() => setBumpState(null)}
+                style={{
+                  padding: "7px 12px",
+                  border: "1px solid var(--rule)",
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: "var(--surface)",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={logBump}
+                disabled={!bumpState.bumpMsg.trim()}
+                style={{
+                  padding: "7px 12px",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: "var(--accent)",
+                  color: "#FFFFFF",
+                  cursor: bumpState.bumpMsg.trim() ? "pointer" : "not-allowed",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  opacity: bumpState.bumpMsg.trim() ? 1 : 0.5,
+                }}
+              >
+                Save Bump
+              </button>
+            </div>
           </div>
+        )}
+      </Modal>
+
+      <Modal open={bumpsWs !== null} onClose={() => setBumpsWs(null)} title={`Bumps — ${bumpsWs?.name ?? ""}`} wide>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr>
+                {["Date", "Bump Msg", "Ball Holder", "Stage", "Changed By"].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: "8px 10px",
+                      textAlign: "left",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase",
+                      backgroundColor: "var(--ground-metric)",
+                      borderBottom: "1px solid var(--rule-strong)",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!bumpsList ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                    Loading...
+                  </td>
+                </tr>
+              ) : bumpsList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                    No bumps logged
+                  </td>
+                </tr>
+              ) : (
+                bumpsList.map((bump) => (
+                  <tr key={bump.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                    <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums" }}>
+                      {(bump.bumpDate ? new Date(bump.bumpDate) : new Date(bump.changedAt)).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.note || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.newValue || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.fieldName || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.changedBy || "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </Modal>
 
@@ -416,6 +671,17 @@ export default function ProjectDetailPage() {
           { key: "assignedDeveloper", label: "Assigned Developer" },
         ]}
         onSubmit={addWorkStream}
+      />
+
+      <EntityFormModal
+        key={addStageWsId !== null ? "stage-open" : "stage-closed"}
+        open={addStageWsId !== null}
+        onClose={() => setAddStageWsId(null)}
+        title="Add Stage"
+        fields={[
+          { key: "name", label: "Stage Name", required: true },
+        ]}
+        onSubmit={addStage}
       />
 
       <EntityFormModal
@@ -573,16 +839,49 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
 
 function WorkStreamCard({
   ws,
-  onUpdate,
-  onLogStage,
-  onLogBump,
+  ballGroups,
+  onUpdateName,
+  onUpdateBall,
+  onUpdateStage,
+  onReorderStage,
+  onDeleteStage,
+  onAddStage,
+  onBump,
+  onOpenBumps,
 }: {
   ws: WorkStreamWithStages;
-  onUpdate: (data: Record<string, string | number>) => void;
-  onLogStage: (stageId: number, date: string) => void;
-  onLogBump: () => void;
+  ballGroups: string[];
+  onUpdateName: (name: string) => void;
+  onUpdateBall: (ball: string) => void;
+  onUpdateStage: (stageId: number, data: Record<string, string | number | null>) => void;
+  onReorderStage: (stageId: number, direction: "up" | "down") => void;
+  onDeleteStage: (stageId: number) => void;
+  onAddStage: () => void;
+  onBump: () => void;
+  onOpenBumps: () => void;
 }) {
   const health = computeHealth(ws.currentStage);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(ws.name ?? "");
+  const [renamingStage, setRenamingStage] = useState<number | null>(null);
+  const [stageNameValue, setStageNameValue] = useState("");
+
+  const sortedStages = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
+  const latestBump = ws.latestBump ?? null;
+  const bumpMsg = latestBump?.note || null;
+  const lastBumped = latestBump ? (latestBump.bumpDate ? new Date(latestBump.bumpDate) : new Date(latestBump.changedAt)) : null;
+
+  const commitName = () => {
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== ws.name) onUpdateName(trimmed);
+    setEditingName(false);
+  };
+
+  const commitStageName = (stageId: number) => {
+    const trimmed = stageNameValue.trim();
+    if (trimmed) onUpdateStage(stageId, { name: trimmed });
+    setRenamingStage(null);
+  };
 
   return (
     <div
@@ -595,14 +894,39 @@ function WorkStreamCard({
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-sm)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <span style={{ fontWeight: 600, fontSize: "14px" }}>{ws.name || "Work Stream"}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+          {editingName ? (
+            <input
+              autoFocus
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={(e) => { if (e.key === "Enter") commitName(); if (e.key === "Escape") setEditingName(false); }}
+              style={{
+                padding: "4px 8px",
+                border: "1px solid var(--accent)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "14px",
+                fontWeight: 600,
+                fontFamily: "var(--font-sans)",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <span style={{ fontWeight: 600, fontSize: "14px" }}>{ws.name || "Work Stream"}</span>
+          )}
+          <button
+            onClick={() => { setEditingName(true); setNameValue(ws.name ?? ""); }}
+            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "11px", padding: "2px 4px" }}
+          >
+            Edit
+          </button>
           <HealthBadge health={health} />
         </div>
-        <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center", flexWrap: "wrap" }}>
           <select
             value={ws.currentBall}
-            onChange={(e) => onUpdate({ currentBall: e.target.value })}
+            onChange={(e) => onUpdateBall(e.target.value)}
             style={{
               padding: "4px 8px",
               border: "1px solid var(--rule)",
@@ -610,14 +934,29 @@ function WorkStreamCard({
               fontSize: "12px",
               fontFamily: "var(--font-sans)",
               outline: "none",
+              backgroundColor: "var(--surface)",
             }}
           >
-            <option value="PMO">PMO</option>
-            <option value="Developers">Developers</option>
-            <option value="System Owner">System Owner</option>
+            {ballGroups.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
           </select>
           <button
-            onClick={onLogBump}
+            onClick={onAddStage}
+            style={{
+              padding: "4px 8px",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--radius-md)",
+              backgroundColor: "var(--surface)",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            + Stage
+          </button>
+          <button
+            onClick={onBump}
             style={{
               padding: "4px 8px",
               border: "1px solid var(--rule)",
@@ -641,7 +980,7 @@ function WorkStreamCard({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
           <thead>
             <tr>
-              {["Stage", "Planned", "Actual", "Delay/Advance", "Responsible"].map((h) => (
+              {["⇅", "Stage", "Planned", "Actual", "▲▼", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -662,35 +1001,129 @@ function WorkStreamCard({
             </tr>
           </thead>
           <tbody>
-            {ws.flowStages.map((stage) => (
-              <tr key={stage.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
-                  {stage.name}
-                </td>
-                <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
-                  <DatePicker
-                    value={stage.plannedDate ? new Date(stage.plannedDate).toISOString().split("T")[0] : ""}
-                    onChange={() => onLogStage(stage.id, stage.actualDate ? new Date(stage.actualDate).toISOString().split("T")[0] : "")}
-                  />
-                </td>
-                <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
-                  <DatePicker
-                    value={stage.actualDate ? new Date(stage.actualDate).toISOString().split("T")[0] : ""}
-                    onChange={(d) => onLogStage(stage.id, d)}
-                  />
-                </td>
-                <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
-                  {stage.delayAdvanceDays !== null ? (
-                    <span style={{ color: stage.delayAdvanceDays > 0 ? "var(--health-atrisk-ink)" : "var(--health-ontime-ink)" }}>
-                      {stage.delayAdvanceDays > 0 ? `+${stage.delayAdvanceDays}d` : `${stage.delayAdvanceDays}d`}
-                    </span>
-                  ) : "—"}
-                </td>
-                <td style={{ padding: "6px 8px", color: "var(--ink-secondary)" }}>
-                  {stage.responsiblePerson || "—"}
+            {sortedStages.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                  No stages yet
                 </td>
               </tr>
-            ))}
+            ) : (
+              sortedStages.map((stage, idx) => (
+                <tr key={stage.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                  <td style={{ padding: "4px 6px", whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                    <button
+                      onClick={() => onReorderStage(stage.id, "up")}
+                      disabled={idx === 0}
+                      title="Move up"
+                      style={{ background: "none", border: "none", cursor: idx === 0 ? "default" : "pointer", color: idx === 0 ? "var(--ink-tertiary)" : "var(--accent)", fontSize: "11px", padding: "0 2px", opacity: idx === 0 ? 0.4 : 1 }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => onReorderStage(stage.id, "down")}
+                      disabled={idx === sortedStages.length - 1}
+                      title="Move down"
+                      style={{ background: "none", border: "none", cursor: idx === sortedStages.length - 1 ? "default" : "pointer", color: idx === sortedStages.length - 1 ? "var(--ink-tertiary)" : "var(--accent)", fontSize: "11px", padding: "0 2px", opacity: idx === sortedStages.length - 1 ? 0.4 : 1 }}
+                    >
+                      ▼
+                    </button>
+                  </td>
+                  <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
+                    {renamingStage === stage.id ? (
+                      <input
+                        autoFocus
+                        value={stageNameValue}
+                        onChange={(e) => setStageNameValue(e.target.value)}
+                        onBlur={() => commitStageName(stage.id)}
+                        onKeyDown={(e) => { if (e.key === "Enter") commitStageName(stage.id); if (e.key === "Escape") setRenamingStage(null); }}
+                        style={{
+                          padding: "2px 6px",
+                          border: "1px solid var(--accent)",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "12px",
+                          fontFamily: "var(--font-sans)",
+                          outline: "none",
+                          width: "160px",
+                        }}
+                      />
+                    ) : (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        {stage.name}
+                        <button
+                          onClick={() => { setRenamingStage(stage.id); setStageNameValue(stage.name); }}
+                          title="Rename"
+                          style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "10px", padding: "0" }}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => onDeleteStage(stage.id)}
+                          title="Delete stage"
+                          style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "11px", padding: "0" }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
+                    <DatePicker
+                      value={stage.plannedDate ? new Date(stage.plannedDate).toISOString().split("T")[0] : ""}
+                      onChange={(d) => onUpdateStage(stage.id, { plannedDate: d || null })}
+                    />
+                  </td>
+                  <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
+                    <DatePicker
+                      value={stage.actualDate ? new Date(stage.actualDate).toISOString().split("T")[0] : ""}
+                      onChange={(d) => onUpdateStage(stage.id, { actualDate: d || null })}
+                    />
+                  </td>
+                  <td style={{ padding: "6px 8px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
+                    {stage.delayAdvanceDays === null || stage.delayAdvanceDays === 0 ? (
+                      <span style={{ color: "var(--ink-tertiary)" }}>—</span>
+                    ) : stage.delayAdvanceDays > 0 ? (
+                      <span style={{ color: "var(--health-atrisk-ink)", fontWeight: 700 }} title={`Delayed by ${stage.delayAdvanceDays}d`}>▼</span>
+                    ) : (
+                      <span style={{ color: "var(--health-ontime-ink)", fontWeight: 700 }} title={`Advanced by ${Math.abs(stage.delayAdvanceDays)}d`}>▲</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "6px 8px", color: "var(--ink-secondary)" }}>
+                    <select
+                      value={stage.responsiblePerson ?? ""}
+                      onChange={(e) => onUpdateStage(stage.id, { responsiblePerson: e.target.value || null })}
+                      style={{
+                        padding: "2px 6px",
+                        border: "1px solid var(--rule)",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "12px",
+                        fontFamily: "var(--font-sans)",
+                        outline: "none",
+                        backgroundColor: "var(--surface)",
+                      }}
+                    >
+                      <option value="">—</option>
+                      {ballGroups.map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {bumpMsg || "—"}
+                  </td>
+                  <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
+                    {lastBumped ? (
+                      <button
+                        onClick={onOpenBumps}
+                        title="View all bumps"
+                        style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "0", fontFamily: "var(--font-sans)" }}
+                      >
+                        {lastBumped.toLocaleDateString()}
+                      </button>
+                    ) : "—"}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

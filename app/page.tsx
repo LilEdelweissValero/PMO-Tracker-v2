@@ -90,7 +90,7 @@ export default function DashboardPage() {
                   </td>
                   <td style={{ padding: "8px 10px" }}>{entry.currentStage || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    {new Date(entry.changedAt).toLocaleDateString()}
+                    {(entry.bumpDate ? new Date(entry.bumpDate) : new Date(entry.changedAt)).toLocaleDateString()}
                   </td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {entry.note || "—"}

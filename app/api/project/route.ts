@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { logChange, touchLastModified } from "@/lib/server-actions";
+import {
+  logChange,
+  touchLastModified,
+  createWorkStreamWithStages,
+  defaultWorkStreamName,
+} from "@/lib/server-actions";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -97,6 +102,25 @@ export async function POST(request: NextRequest) {
       newValue: project.name,
       changedBy: body.changedBy ?? "System",
     });
+
+    const systems = systemEntryIds.length
+      ? await prisma.systemModuleEntry.findMany({
+          where: { id: { in: systemEntryIds } },
+        })
+      : [];
+
+    const desiredNames =
+      systems.length > 0
+        ? systems.map((s) => defaultWorkStreamName(s.system, s.module))
+        : [defaultWorkStreamName(systemNameValue || body.name.trim(), body.specificModule ?? null)];
+
+    for (const name of desiredNames) {
+      await createWorkStreamWithStages({
+        projectId: project.id,
+        name,
+        changedBy: body.changedBy ?? "System",
+      });
+    }
 
     await touchLastModified(project.id);
 

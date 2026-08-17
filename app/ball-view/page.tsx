@@ -4,16 +4,31 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LatestEntry, BallViewData } from "@/lib/types";
 
+const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+
 export default function BallViewPage() {
   const [data, setData] = useState<BallViewData | null>(null);
+  const [groups, setGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((r) => r.json())
-      .then((d) => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/config-value?category=ball_groups").then((r) => r.json()),
+      fetch("/api/dashboard").then((r) => r.json()),
+    ])
+      .then(([config, d]) => {
+        if (cancelled) return;
+        const configGroups = (config as { value: string }[])
+          .map((c) => c.value)
+          .filter((v) => v.trim());
+        const groupList = configGroups.length ? configGroups : FALLBACK_BALL_GROUPS;
+        setGroups(groupList);
+
         const all = [...d.latestProgress, ...d.latestBumps];
-        const byBall: BallViewData = { pmo: [], developers: [], systemOwner: [] };
+        const byBall: BallViewData = {};
+        groupList.forEach((g) => { byBall[g] = []; });
+        byBall["Other"] = [];
         const seen = new Map<number, LatestEntry>();
 
         for (const entry of all) {
@@ -23,16 +38,18 @@ export default function BallViewPage() {
 
         for (const entry of seen.values()) {
           const ball = entry.currentBall?.toLowerCase() ?? "";
-          if (ball === "pmo") byBall.pmo.push(entry);
-          else if (ball === "developers") byBall.developers.push(entry);
-          else if (ball === "system owner") byBall.systemOwner.push(entry);
-          else byBall.pmo.push(entry);
+          const match = groupList.find((g) => g.toLowerCase() === ball);
+          const target = match ?? "Other";
+          byBall[target].push(entry);
         }
 
         setData(byBall);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {
@@ -42,6 +59,9 @@ export default function BallViewPage() {
       </div>
     );
   }
+
+  const visibleGroups = [...groups];
+  if ((data?.["Other"] ?? []).length > 0) visibleGroups.push("Other");
 
   const renderTable = (title: string, entries: LatestEntry[]) => (
     <div style={{ flex: 1, minWidth: "350px" }}>
@@ -108,9 +128,7 @@ export default function BallViewPage() {
         Ball View
       </h1>
       <div style={{ display: "flex", gap: "var(--space-lg)", flexWrap: "wrap" }}>
-        {renderTable("PMO", data?.pmo ?? [])}
-        {renderTable("Developers", data?.developers ?? [])}
-        {renderTable("System Owner", data?.systemOwner ?? [])}
+        {visibleGroups.map((group) => renderTable(group, data?.[group] ?? []))}
       </div>
     </div>
   );

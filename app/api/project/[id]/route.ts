@@ -30,9 +30,25 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const bumpLogs = await prisma.changeLog.findMany({
+    where: { projectId, entryType: "bump" },
+    orderBy: { changedAt: "desc" },
+  });
+
+  const latestBumpByWs = new Map<number, (typeof bumpLogs)[number]>();
+  for (const log of bumpLogs) {
+    if (log.workStreamId && !latestBumpByWs.has(log.workStreamId)) {
+      latestBumpByWs.set(log.workStreamId, log);
+    }
+  }
+
   const { projectSystems, ...rest } = project;
   return NextResponse.json({
     ...rest,
+    workStreams: rest.workStreams.map((ws) => ({
+      ...ws,
+      latestBump: latestBumpByWs.get(ws.id) ?? null,
+    })),
     systems: projectSystems
       .map((ps) => ps.systemModuleEntry)
       .filter((s) => !s.archived),

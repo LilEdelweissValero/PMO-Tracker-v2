@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       newValue: body.newValue ?? null,
       note: body.note ?? null,
       changedBy: body.changedBy ?? null,
+      bumpDate: body.bumpDate ? new Date(body.bumpDate) : null,
     },
   });
 

@@ -52,6 +52,21 @@ export interface ChangeLogCreate {
   newValue?: string;
   note?: string;
   changedBy?: string;
+  bumpDate?: string;
+}
+
+export interface ChangeLogEntry {
+  id: number;
+  workStreamId: number | null;
+  projectId: number | null;
+  entryType: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  note: string | null;
+  changedBy: string | null;
+  changedAt: Date;
+  bumpDate: Date | null;
 }
 
 export interface DirectoryCreate {
@@ -110,6 +125,7 @@ export interface WorkStreamWithStages {
   updatedAt: Date;
   flowStages: FlowStageWithDerived[];
   currentStage: FlowStageWithDerived | null;
+  latestBump?: ChangeLogEntry | null;
 }
 
 export interface ProjectWithWorkStreams {
@@ -149,6 +165,7 @@ export interface LatestEntry {
   note: string | null;
   changedBy: string | null;
   changedAt: Date;
+  bumpDate: Date | null;
   workStreamName: string | null;
   projectName: string;
   currentStage: string | null;
@@ -161,9 +178,7 @@ export interface DashboardData {
 }
 
 export interface BallViewData {
-  pmo: LatestEntry[];
-  developers: LatestEntry[];
-  systemOwner: LatestEntry[];
+  [group: string]: LatestEntry[];
 }
 
 export interface ReportSnapshot {

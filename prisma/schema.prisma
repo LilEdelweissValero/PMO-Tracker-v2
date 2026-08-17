@@ -106,6 +106,7 @@ model ChangeLog {
   note          String?
   changedBy     String?  @map("changed_by")
   changedAt     DateTime @default(now()) @map("changed_at")
+  bumpDate      DateTime? @map("bump_date")
 
   workStream WorkStream? @relation(fields: [workStreamId], references: [id], onDelete: Cascade)
   project    Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)

@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         ...log,
         workStreamName: ws?.name ?? null,
         projectName: ws?.project.name ?? "Unknown",
-        currentStage: currentStage?.name ?? null,
+        currentStage: currentStage?.name ?? "Not Started",
         currentBall: ws?.currentBall ?? null,
       };
     });
