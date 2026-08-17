@@ -52,7 +52,7 @@ export default function ProjectsPage() {
     { key: "id", label: "ID", width: "70px", zone: "identity" as const },
     { key: "name", label: "Project Name", zone: "identity" as const },
     { key: "systemName", label: "System", width: "220px", zone: "metric" as const },
-    { key: "status", label: "Status", width: "90px", zone: "metric" as const },
+    { key: "status", label: "Status", width: "150px", zone: "metric" as const },
     { key: "priority", label: "Priority", width: "80px", zone: "metric" as const },
     { key: "pmOfficer", label: "PM Officer", zone: "metric" as const },
     { key: "requestType", label: "Request Type", zone: "metric" as const },
@@ -142,6 +142,7 @@ export default function ProjectsPage() {
                         fontSize: "11px",
                         fontWeight: 600,
                         letterSpacing: "0.03em",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {status}
