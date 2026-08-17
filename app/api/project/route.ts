@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { logChange, touchLastModified } from "@/lib/server-actions";
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const archived = searchParams.get("archived") === "true";
+
+  const projects = await prisma.project.findMany({
+    where: { archived },
+    include: {
+      workStreams: {
+        where: { archived: false },
+        include: { flowStages: { where: { archived: false } } },
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return NextResponse.json(projects);
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+
+  if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      name: body.name.trim(),
+      priority: body.priority ?? null,
+      scopeDescription: body.scopeDescription ?? null,
+      references: body.references ?? [],
+      initiatedBy: body.initiatedBy ?? null,
+      requestedByName: body.requestedByName ?? null,
+      requestedByDept: body.requestedByDept ?? null,
+      systemName: body.systemName ?? null,
+      specificModule: body.specificModule ?? null,
+      systemOwnerName: body.systemOwnerName ?? null,
+      systemOwnerDept: body.systemOwnerDept ?? null,
+      requestType: body.requestType ?? null,
+      pmOfficer: body.pmOfficer ?? null,
+      remarks: body.remarks ?? null,
+    },
+  });
+
+  await logChange({
+    projectId: project.id,
+    entryType: "field_change",
+    fieldName: "created",
+    newValue: project.name,
+    changedBy: body.changedBy ?? "System",
+  });
+
+  await touchLastModified(project.id);
+
+  return NextResponse.json(project, { status: 201 });
+}

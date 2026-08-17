@@ -1,0 +1,80 @@
+"use client";
+
+interface DetailHeroProps {
+  kicker: string;
+  title: string;
+  meta: { label: string; value: string | null }[];
+  accentColor?: string;
+}
+
+export default function DetailHero({ kicker, title, meta, accentColor }: DetailHeroProps) {
+  return (
+    <div
+      style={{
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--rule)",
+        borderTop: `4px solid ${accentColor ?? "var(--accent)"}`,
+        borderRadius: "var(--radius-lg)",
+        padding: "var(--space-lg)",
+        boxShadow: "var(--shadow-detail-hero)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "10px",
+          fontWeight: 600,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "var(--ink-tertiary)",
+          marginBottom: "var(--space-sm)",
+        }}
+      >
+        {kicker}
+      </div>
+      <h1
+        style={{
+          fontSize: "clamp(22px, 3vw, 30px)",
+          fontWeight: 750,
+          lineHeight: 1.1,
+          margin: "0 0 var(--space-md) 0",
+          fontFamily: "var(--font-sans)",
+          color: "var(--ink-primary)",
+        }}
+      >
+        {title}
+      </h1>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "var(--space-sm) var(--space-lg)",
+        }}
+      >
+        {meta.map((item, i) => (
+          <div key={i}>
+            <div
+              style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--ink-tertiary)",
+                marginBottom: "2px",
+              }}
+            >
+              {item.label}
+            </div>
+            <div
+              style={{
+                fontSize: "14px",
+                color: item.value ? "var(--ink-primary)" : "var(--ink-tertiary)",
+              }}
+            >
+              {item.value || "—"}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

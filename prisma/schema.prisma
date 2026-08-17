@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id               Int       @id @default(autoincrement())
+  name             String
+  priority         String?
+  scopeDescription String?   @map("scope_description")
+  references       Json      @default("[]")
+  initiatedBy      String?   @map("initiated_by")
+  requestedByName  String?   @map("requested_by_name")
+  requestedByDept  String?   @map("requested_by_dept")
+  systemName       String?   @map("system_name")
+  specificModule   String?   @map("specific_module")
+  systemOwnerName  String?   @map("system_owner_name")
+  systemOwnerDept  String?   @map("system_owner_dept")
+  requestType      String?   @map("request_type")
+  pmOfficer        String?   @map("pm_officer")
+  remarks          String?
+  signoffStatus    String    @default("not_signed_off") @map("signoff_status")
+  archived         Boolean   @default(false)
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  workStreams  WorkStream[]
+  changeLogs   ChangeLog[]
+
+  @@index([sortOrder])
+  @@map("projects")
+}
+
+model WorkStream {
+  id                Int       @id @default(autoincrement())
+  projectId         Int       @map("project_id")
+  name              String?
+  assignedDeveloper String?   @map("assigned_developer")
+  currentBall       String    @default("PMO") @map("current_ball")
+  archived          Boolean   @default(false)
+  sortOrder         Int       @default(0) @map("sort_order")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  flowStages FlowStage[]
+  changeLogs ChangeLog[]
+
+  @@index([projectId])
+  @@index([sortOrder])
+  @@map("work_streams")
+}
+
+model FlowStage {
+  id               Int       @id @default(autoincrement())
+  workStreamId     Int       @map("work_stream_id")
+  name             String
+  orderIdx         Int       @map("order_idx")
+  plannedDate      DateTime? @map("planned_date")
+  actualDate       DateTime? @map("actual_date")
+  responsiblePerson String?  @map("responsible_person")
+  archived         Boolean   @default(false)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  workStream WorkStream @relation(fields: [workStreamId], references: [id], onDelete: Cascade)
+
+  @@index([workStreamId])
+  @@index([orderIdx])
+  @@map("flow_stages")
+}
+
+model ChangeLog {
+  id            Int      @id @default(autoincrement())
+  workStreamId  Int?     @map("work_stream_id")
+  projectId     Int?     @map("project_id")
+  entryType     String   @map("entry_type")
+  fieldName     String?  @map("field_name")
+  oldValue      String?  @map("old_value")
+  newValue      String?  @map("new_value")
+  note          String?
+  changedBy     String?  @map("changed_by")
+  changedAt     DateTime @default(now()) @map("changed_at")
+
+  workStream WorkStream? @relation(fields: [workStreamId], references: [id], onDelete: Cascade)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([workStreamId])
+  @@index([projectId])
+  @@index([changedAt])
+  @@index([entryType])
+  @@map("change_logs")
+}
+
+model DirectorySystem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  details   String?
+  archived  Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("directory_systems")
+}
+
+model DirectoryDepartment {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  details   String?
+  archived  Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sortOrder])
+  @@map("directory_departments")
+}
+
+model ConfigValue {
+  id        Int      @id @default(autoincrement())
+  category  String
+  value     String
+  sortOrder Int      @default(0) @map("sort_order")
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([sortOrder])
+  @@map("config_values")
+}

@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+:root {
+  --ground: #F7F8FA;
+  --ground-metric: #F0F2F6;
+  --surface: #FFFFFF;
+
+  --ink-primary: #0F1117;
+  --ink-secondary: #4A5568;
+  --ink-tertiary: #8896A8;
+  --ink-on-dark: #F7F8FA;
+
+  --rule: #DDE2EA;
+  --rule-strong: #C4CCD8;
+
+  --accent: #1A56DB;
+  --accent-hover: #1447C0;
+  --accent-bg: #EBF2FF;
+
+  --status-nys-bg: #F1F3F6;
+  --status-nys-ink: #5A6478;
+  --status-planning-bg: #EAF1FE;
+  --status-planning-ink: #1D4BAA;
+  --status-partial-bg: #FFF3E0;
+  --status-partial-ink: #8B5200;
+  --status-mostly-bg: #E8F4FF;
+  --status-mostly-ink: #0A5FA8;
+  --status-complete-bg: #E6F4EE;
+  --status-complete-ink: #1A6B3C;
+
+  --health-completed-bg: #E6F4EE;
+  --health-completed-ink: #1A6B3C;
+  --health-ontime-bg: #E6F4EE;
+  --health-ontime-ink: #1A6B3C;
+  --health-atrisk-bg: #FFF0EE;
+  --health-atrisk-ink: #B91C1C;
+  --health-delayed-bg: #EAF1FE;
+  --health-delayed-ink: #1D4BAA;
+  --health-notdue-bg: #F1F3F6;
+  --health-notdue-ink: #5A6478;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  --shadow-dropdown: 0 4px 16px rgba(15,17,23,0.12), 0 1px 4px rgba(15,17,23,0.08);
+  --shadow-task-panel: 0 1px 4px rgba(15,17,23,0.05);
+  --shadow-detail-hero: 0 1px 4px rgba(15,17,23,0.07), 0 0 0 1px rgba(15,17,23,0.02);
+}
+
+@theme inline {
+  --color-background: var(--ground);
+  --color-foreground: var(--ink-primary);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink-primary);
+  font-family: var(--font-sans, "Geist", "Inter", system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.label-caps {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: var(--font-sans, "Geist", "Inter", system-ui, sans-serif);
+}
+
+.text-body {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-compact {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.text-small {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.text-micro {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
