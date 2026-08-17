@@ -17,7 +17,7 @@ interface EntityFormModalProps {
   title: string;
   fields: Field[];
   initialData?: Record<string, string | number>;
-  onSubmit: (data: Record<string, string | number>) => void;
+  onSubmit: (data: Record<string, string | number>) => Promise<void> | void;
   wide?: boolean;
 }
 
@@ -33,11 +33,21 @@ export default function EntityFormModal({
   const [formData, setFormData] = useState<Record<string, string | number>>(
     initialData ?? {}
   );
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onSubmit(formData);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const updateField = (key: string, value: string | number) => {
@@ -122,10 +132,22 @@ export default function EntityFormModal({
             )}
           </div>
         ))}
+        {error && (
+          <div style={{
+            padding: "8px 12px",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "var(--health-atrisk-bg)",
+            color: "var(--health-atrisk-ink)",
+            fontSize: "13px",
+          }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
           <button
             type="button"
             onClick={onClose}
+            disabled={submitting}
             style={{
               padding: "7px 12px",
               border: "1px solid var(--rule)",
@@ -141,18 +163,20 @@ export default function EntityFormModal({
           </button>
           <button
             type="submit"
+            disabled={submitting}
             style={{
               padding: "7px 12px",
               border: "none",
               borderRadius: "var(--radius-md)",
               backgroundColor: "var(--accent)",
               color: "#FFFFFF",
-              cursor: "pointer",
+              cursor: submitting ? "not-allowed" : "pointer",
               fontSize: "13px",
               fontFamily: "var(--font-sans)",
+              opacity: submitting ? 0.6 : 1,
             }}
           >
-            Save
+            {submitting ? "Saving..." : "Save"}
           </button>
         </div>
       </form>

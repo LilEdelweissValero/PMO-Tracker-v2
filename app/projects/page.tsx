@@ -21,11 +21,15 @@ export default function ProjectsPage() {
   useEffect(() => { fetchProjects(); }, []);
 
   const handleCreate = async (data: Record<string, string | number>) => {
-    await fetch("/api/project", {
+    const res = await fetch("/api/project", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? `Failed to create project (${res.status})`);
+    }
     fetchProjects();
   };
 
@@ -148,6 +152,7 @@ export default function ProjectsPage() {
       </div>
 
       <EntityFormModal
+        key={showCreate ? "create-open" : "create-closed"}
         open={showCreate}
         onClose={() => setShowCreate(false)}
         title="New Project"

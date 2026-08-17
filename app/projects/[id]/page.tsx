@@ -104,11 +104,15 @@ export default function ProjectDetailPage() {
   };
 
   const addWorkStream = async (data: Record<string, string | number>) => {
-    await fetch("/api/work-stream", {
+    const res = await fetch("/api/work-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, projectId }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? `Failed to add work stream (${res.status})`);
+    }
     refetch();
   };
 
@@ -239,6 +243,7 @@ export default function ProjectDetailPage() {
       <Modal open={!!editingField} onClose={() => setEditingField(null)} title={`Edit ${editingField ?? ""}`}>
         {editingField && (
           <EntityFormModal
+            key={editingField ?? "edit"}
             open={true}
             onClose={() => setEditingField(null)}
             title={`Edit ${editingField}`}
@@ -305,6 +310,7 @@ export default function ProjectDetailPage() {
       </Modal>
 
       <EntityFormModal
+        key={showAddWorkStream ? "ws-open" : "ws-closed"}
         open={showAddWorkStream}
         onClose={() => setShowAddWorkStream(false)}
         title="Add Work Stream"
