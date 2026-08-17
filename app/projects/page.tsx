@@ -49,7 +49,7 @@ export default function ProjectsPage() {
   }
 
   const columns = [
-    { key: "id", label: "#", width: "50px", zone: "identity" as const },
+    { key: "id", label: "ID", width: "70px", zone: "identity" as const },
     { key: "name", label: "Project Name", zone: "identity" as const },
     { key: "status", label: "Status", zone: "metric" as const },
     { key: "priority", label: "Priority", width: "80px", zone: "metric" as const },
@@ -121,7 +121,7 @@ export default function ProjectsPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
                 >
                   <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums", borderRight: "1px solid var(--rule)" }}>
-                    {project.id}
+                    {project.projectId || "—"}
                   </td>
                   <td style={{ padding: "8px 10px" }}>
                     <Link
@@ -164,6 +164,7 @@ export default function ProjectsPage() {
         onClose={() => setShowCreate(false)}
         title="New Project"
         fields={[
+          { key: "projectId", label: "ID", required: true },
           { key: "name", label: "Project Name", required: true },
           { key: "priority", label: "Priority", type: "combo", configCategory: "priority", required: true },
           { key: "scopeDescription", label: "Scope Description", type: "textarea", required: true },

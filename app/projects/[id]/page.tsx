@@ -74,11 +74,15 @@ export default function ProjectDetailPage() {
   };
 
   const updateProject = async (data: Record<string, string | number | ReferenceLink[]>) => {
-    await fetch(`/api/project/${projectId}`, {
+    const res = await fetch(`/api/project/${projectId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? `Failed to update project (${res.status})`);
+    }
     refetch();
     playPing();
     showToast("Project updated");
@@ -269,10 +273,10 @@ export default function ProjectDetailPage() {
             key={editingField ?? "edit"}
             open={true}
             onClose={() => setEditingField(null)}
-            title={`Edit ${editingField}`}
+            title={`Edit ${FIELD_LABEL_MAP[editingField] ?? editingField}`}
             fields={[{
               key: editingField,
-              label: editingField,
+              label: FIELD_LABEL_MAP[editingField] ?? editingField,
               type: (FIELD_TYPE_MAP[editingField]?.type as "text" | "textarea" | "combo") ?? "text",
               configCategory: FIELD_TYPE_MAP[editingField]?.configCategory,
               required: true,
@@ -354,6 +358,7 @@ export default function ProjectDetailPage() {
 }
 
 const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string }> = {
+  projectId: { type: "text" },
   name: { type: "text" },
   priority: { type: "combo", configCategory: "priority" },
   scopeDescription: { type: "textarea" },
@@ -366,6 +371,22 @@ const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string }> 
   specificModule: { type: "text" },
   systemOwnerName: { type: "text" },
   systemOwnerDept: { type: "text" },
+};
+
+const FIELD_LABEL_MAP: Record<string, string> = {
+  projectId: "ID",
+  name: "Project Name",
+  priority: "Priority",
+  scopeDescription: "Scope Description",
+  initiatedBy: "Initiated By",
+  requestedByName: "Requested By Name",
+  requestedByDept: "Requested By Dept",
+  requestType: "Request Type",
+  pmOfficer: "PM Officer",
+  systemName: "System Name",
+  specificModule: "Specific Module",
+  systemOwnerName: "System Owner Name",
+  systemOwnerDept: "System Owner Dept",
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

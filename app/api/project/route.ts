@@ -34,9 +34,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
+  if (!body.projectId || typeof body.projectId !== "string" || !body.projectId.trim()) {
+    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  }
+  const projectIdValue = body.projectId.trim();
+
+  const duplicate = await prisma.project.findFirst({
+    where: { projectId: projectIdValue, archived: false },
+  });
+  if (duplicate) {
+    return NextResponse.json({ error: `ID "${projectIdValue}" is already in use` }, { status: 409 });
+  }
+
   try {
     const project = await prisma.project.create({
       data: {
+        projectId: projectIdValue,
         name: body.name.trim(),
         priority: body.priority || null,
         scopeDescription: body.scopeDescription || null,

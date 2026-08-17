@@ -46,8 +46,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (body.projectId !== undefined) {
+    const nextProjectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
+    if (!nextProjectId) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+    const duplicate = await prisma.project.findFirst({
+      where: { projectId: nextProjectId, archived: false, NOT: { id: projectId } },
+    });
+    if (duplicate) {
+      return NextResponse.json({ error: `ID "${nextProjectId}" is already in use` }, { status: 409 });
+    }
+  }
+
   const trackedFields = [
-    "name", "priority", "scopeDescription", "initiatedBy",
+    "projectId", "name", "priority", "scopeDescription", "initiatedBy",
     "requestedByName", "requestedByDept", "systemName", "specificModule",
     "systemOwnerName", "systemOwnerDept", "requestType", "pmOfficer",
     "remarks", "signoffStatus",
@@ -80,6 +93,7 @@ export async function PATCH(
   const project = await prisma.project.update({
     where: { id: projectId },
     data: {
+      projectId: body.projectId !== undefined ? (typeof body.projectId === "string" ? body.projectId.trim() : existing.projectId) : existing.projectId,
       name: body.name ?? existing.name,
       priority: body.priority !== undefined ? body.priority : existing.priority,
       scopeDescription: body.scopeDescription !== undefined ? body.scopeDescription : existing.scopeDescription,

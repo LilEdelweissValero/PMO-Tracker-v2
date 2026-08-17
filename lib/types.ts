@@ -4,6 +4,7 @@ export interface ReferenceLink {
 }
 
 export interface ProjectCreate {
+  projectId: string;
   name: string;
   priority?: string;
   scopeDescription?: string;
@@ -90,6 +91,7 @@ export interface WorkStreamWithStages {
 
 export interface ProjectWithWorkStreams {
   id: number;
+  projectId: string;
   name: string;
   priority: string | null;
   scopeDescription: string | null;

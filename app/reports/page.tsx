@@ -56,7 +56,7 @@ export default function ReportsPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["#", "Project Name", "Status", "Priority", "PM Officer", "Request Type", "Initiated By", "System"].map((h, i) => (
+                {["ID", "Project Name", "Status", "Priority", "PM Officer", "Request Type", "Initiated By", "System"].map((h, i) => (
                   <th
                     key={h}
                     style={{
@@ -91,7 +91,7 @@ export default function ReportsPage() {
                   const colors = getStatusColorClass(status);
                   return (
                     <tr key={project.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                      <td style={{ padding: "8px 10px", borderRight: "1px solid var(--rule)" }}>{project.id}</td>
+                      <td style={{ padding: "8px 10px", borderRight: "1px solid var(--rule)" }}>{project.projectId}</td>
                       <td style={{ padding: "8px 10px" }}>
                         <Link href={`/projects/${project.id}`} style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
                           {project.name}

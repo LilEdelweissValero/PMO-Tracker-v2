@@ -12,6 +12,7 @@ datasource db {
 
 model Project {
   id               Int       @id @default(autoincrement())
+  projectId        String    @map("project_id")
   name             String
   priority         String?
   scopeDescription String?   @map("scope_description")
