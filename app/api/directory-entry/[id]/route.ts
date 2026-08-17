@@ -35,6 +35,7 @@ export async function PATCH(
     where: { id: entryId },
     data: {
       system,
+      acronym: typeof body.acronym === "string" ? body.acronym.trim() || null : entry.acronym,
       module: moduleName,
       developerAssigned: typeof body.developerAssigned === "string" ? body.developerAssigned.trim() || null : entry.developerAssigned,
       systemOwnerName: typeof body.systemOwnerName === "string" ? body.systemOwnerName.trim() || null : entry.systemOwnerName,

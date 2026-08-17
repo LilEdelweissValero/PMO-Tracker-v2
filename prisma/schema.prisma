@@ -35,9 +35,25 @@ model Project {
 
   workStreams  WorkStream[]
   changeLogs   ChangeLog[]
+  projectSystems ProjectSystem[]
 
   @@index([sortOrder])
   @@map("projects")
+}
+
+model ProjectSystem {
+  id                  Int      @id @default(autoincrement())
+  projectId           Int      @map("project_id")
+  systemModuleEntryId Int      @map("system_module_entry_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  systemModuleEntry SystemModuleEntry  @relation(fields: [systemModuleEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, systemModuleEntryId])
+  @@index([projectId])
+  @@index([systemModuleEntryId])
+  @@map("project_systems")
 }
 
 model WorkStream {
@@ -104,6 +120,7 @@ model ChangeLog {
 model SystemModuleEntry {
   id                Int      @id @default(autoincrement())
   system            String
+  acronym           String?
   module            String?
   developerAssigned String?  @map("developer_assigned")
   systemOwnerName   String?  @map("system_owner_name")
@@ -112,6 +129,8 @@ model SystemModuleEntry {
   sortOrder         Int      @default(0) @map("sort_order")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+
+  projectSystems ProjectSystem[]
 
   @@index([sortOrder])
   @@map("system_module_entries")

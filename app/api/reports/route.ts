@@ -28,6 +28,9 @@ export async function GET(request: NextRequest) {
         include: { flowStages: { where: { archived: false } } },
         orderBy: { sortOrder: "asc" },
       },
+      projectSystems: {
+        include: { systemModuleEntry: true },
+      },
     },
     orderBy: { sortOrder: "asc" },
   });
@@ -103,6 +106,9 @@ export async function GET(request: NextRequest) {
       initiatedBy: pState.initiatedBy ?? project.initiatedBy,
       systemName: pState.systemName ?? project.systemName,
       signoffStatus: pState.signoffStatus ?? project.signoffStatus,
+      systems: project.projectSystems
+        .map((ps) => ps.systemModuleEntry)
+        .filter((s) => !s.archived),
       workStreams: ws,
     };
   });

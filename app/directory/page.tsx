@@ -12,7 +12,7 @@ interface DepartmentItem {
   details: string | null;
 }
 
-const columns = ["System", "Module", "Developer Assigned", "System Owner (Name)", "System Owner (Department)", "Actions"];
+const columns = ["System", "Acronym", "Module", "Developer Assigned", "System Owner (Name)", "System Owner (Department)", "Actions"];
 
 export default function DirectoryPage() {
   const [tab, setTab] = useState<"systems" | "departments">("systems");
@@ -22,6 +22,7 @@ export default function DirectoryPage() {
   const [entriesVersion, setEntriesVersion] = useState(0);
 
   const [newSystem, setNewSystem] = useState("");
+  const [newAcronym, setNewAcronym] = useState("");
   const [newModule, setNewModule] = useState("");
   const [newDeveloper, setNewDeveloper] = useState("");
   const [newOwnerName, setNewOwnerName] = useState("");
@@ -31,6 +32,7 @@ export default function DirectoryPage() {
   const [newDetails, setNewDetails] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editSystem, setEditSystem] = useState("");
+  const [editAcronym, setEditAcronym] = useState("");
   const [editModule, setEditModule] = useState("");
   const [editDeveloper, setEditDeveloper] = useState("");
   const [editOwnerName, setEditOwnerName] = useState("");
@@ -77,6 +79,7 @@ export default function DirectoryPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         system: newSystem.trim(),
+        acronym: newAcronym.trim() || null,
         module: newModule.trim() || null,
         developerAssigned: newDeveloper.trim() || null,
         systemOwnerName: newOwnerName.trim() || null,
@@ -89,6 +92,7 @@ export default function DirectoryPage() {
       return;
     }
     setNewSystem("");
+    setNewAcronym("");
     setNewModule("");
     setNewDeveloper("");
     setNewOwnerName("");
@@ -104,6 +108,7 @@ export default function DirectoryPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         system: editSystem,
+        acronym: editAcronym || null,
         module: editModule || null,
         developerAssigned: editDeveloper || null,
         systemOwnerName: editOwnerName || null,
@@ -203,6 +208,10 @@ export default function DirectoryPage() {
                   onChange={setNewSystem}
                 />
               </div>
+              <div style={{ flex: "1 1 110px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Acronym</span>
+                <input type="text" value={newAcronym} onChange={(e) => setNewAcronym(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+              </div>
               <div style={{ flex: "1 1 150px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Module</span>
                 <ComboField
@@ -288,6 +297,13 @@ export default function DirectoryPage() {
                             entry.system
                           )}
                         </td>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                          {editingId === entry.id ? (
+                            <input type="text" value={editAcronym} onChange={(e) => setEditAcronym(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }} />
+                          ) : (
+                            entry.acronym || "—"
+                          )}
+                        </td>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (
                             <input type="text" value={editModule} onChange={(e) => setEditModule(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
@@ -325,7 +341,7 @@ export default function DirectoryPage() {
                           ) : (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>
                               <button
-                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); }}
+                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditAcronym(entry.acronym ?? ""); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); }}
                                 style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
                               >
                                 Edit

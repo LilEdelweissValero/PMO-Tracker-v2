@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
   const entry = await prisma.systemModuleEntry.create({
     data: {
       system,
+      acronym: typeof body.acronym === "string" ? body.acronym.trim() || null : null,
       module: moduleName,
       developerAssigned: typeof body.developerAssigned === "string" ? body.developerAssigned.trim() || null : null,
       systemOwnerName: typeof body.systemOwnerName === "string" ? body.systemOwnerName.trim() || null : null,

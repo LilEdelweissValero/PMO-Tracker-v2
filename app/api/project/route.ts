@@ -15,11 +15,21 @@ export async function GET(request: NextRequest) {
           include: { flowStages: { where: { archived: false } } },
           orderBy: { sortOrder: "asc" },
         },
+        projectSystems: {
+          include: { systemModuleEntry: true },
+        },
       },
       orderBy: { sortOrder: "asc" },
     });
 
-    return NextResponse.json(projects);
+    return NextResponse.json(
+      projects.map(({ projectSystems, ...p }) => ({
+        ...p,
+        systems: projectSystems
+          .map((ps) => ps.systemModuleEntry)
+          .filter((s) => !s.archived),
+      }))
+    );
   } catch (err) {
     console.error("GET /api/project error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -48,8 +58,11 @@ export async function POST(request: NextRequest) {
 
   const requestTypeValue = typeof body.requestType === "string" ? body.requestType.trim() : "";
   const systemNameValue = typeof body.systemName === "string" ? body.systemName.trim() : "";
+  const systemEntryIds: number[] = Array.isArray(body.systemEntryIds)
+    ? body.systemEntryIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isFinite(id) && id > 0)
+    : [];
   const isNewSystem = requestTypeValue === "New System";
-  if (!isNewSystem && !systemNameValue) {
+  if (!isNewSystem && !systemNameValue && systemEntryIds.length === 0) {
     return NextResponse.json({ error: "System is required when Request Type is not New System" }, { status: 400 });
   }
 
@@ -71,6 +84,9 @@ export async function POST(request: NextRequest) {
         requestType: requestTypeValue || null,
         pmOfficer: body.pmOfficer || null,
         remarks: body.remarks || null,
+        projectSystems: systemEntryIds.length
+          ? { create: systemEntryIds.map((systemModuleEntryId) => ({ systemModuleEntryId })) }
+          : undefined,
       },
     });
 

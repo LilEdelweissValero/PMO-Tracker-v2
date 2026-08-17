@@ -1,19 +1,18 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
-import Modal from "./Modal";
+import { useState, useEffect, useRef } from "react";import Modal from "./Modal";
 import ComboField, { inputStyle } from "./ComboField";
 
 interface Field {
   key: string;
   label: string;
-  type?: "text" | "textarea" | "select" | "number" | "combo";
+  type?: "text" | "textarea" | "select" | "number" | "combo" | "multisource";
   options?: { label: string; value: string }[];
   configCategory?: string;
-  source?: { url: string; valueKey: string };
+  source?: { url: string; valueKey: string; labelKey?: string; moduleKey?: string };
   required?: boolean;
-  requiredIf?: (data: Record<string, string | number>) => boolean;
-  hiddenIf?: (data: Record<string, string | number>) => boolean;
+  requiredIf?: (data: Record<string, string | number | number[]>) => boolean;
+  hiddenIf?: (data: Record<string, string | number | number[]>) => boolean;
   strict?: boolean;
   filterBy?: string;
   sourceFilterKey?: string;
@@ -24,8 +23,8 @@ interface EntityFormModalProps {
   onClose: () => void;
   title: string;
   fields: Field[];
-  initialData?: Record<string, string | number>;
-  onSubmit: (data: Record<string, string | number>) => Promise<void> | void;
+  initialData?: Record<string, string | number | number[]>;
+  onSubmit: (data: Record<string, string | number | number[]>) => Promise<void> | void;
   wide?: boolean;
 }
 
@@ -38,7 +37,7 @@ export default function EntityFormModal({
   onSubmit,
   wide,
 }: EntityFormModalProps) {
-  const [formData, setFormData] = useState<Record<string, string | number>>(
+  const [formData, setFormData] = useState<Record<string, string | number | number[]>>(
     initialData ?? {}
   );
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +57,7 @@ export default function EntityFormModal({
     setError(null);
     setSubmitting(true);
     try {
-      const payload: Record<string, string | number> = {};
+      const payload: Record<string, string | number | number[]> = {};
       for (const field of fields) {
         if (field.hiddenIf?.(formData)) continue;
         if (field.key in formData) payload[field.key] = formData[field.key];
@@ -72,7 +71,7 @@ export default function EntityFormModal({
     }
   };
 
-  const updateField = (key: string, value: string | number) => {
+  const updateField = (key: string, value: string | number | number[]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -113,6 +112,12 @@ export default function EntityFormModal({
                 strict={field.strict}
                 relatedValue={field.filterBy ? (formData[field.filterBy] as string) ?? "" : undefined}
                 sourceFilterKey={field.sourceFilterKey}
+              />
+            ) : field.type === "multisource" && field.source ? (
+              <MultiSourceField
+                source={field.source}
+                value={(formData[field.key] as number[] | undefined) ?? []}
+                onChange={(ids) => updateField(field.key, ids)}
               />
             ) : field.type === "select" ? (
               <select
@@ -189,5 +194,94 @@ export default function EntityFormModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function MultiSourceField({
+  source,
+  value,
+  onChange,
+}: {
+  source: { url: string; valueKey: string; labelKey?: string; moduleKey?: string };
+  value: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [items, setItems] = useState<
+    { id: number; label: string; sublabel?: string }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(source.url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const list = (data as Record<string, unknown>[]).map((item) => ({
+          id: Number(item[source.valueKey]),
+          label: String(item[source.labelKey ?? source.valueKey] ?? ""),
+          sublabel: source.moduleKey
+            ? String(item[source.moduleKey] ?? "").trim() || undefined
+            : undefined,
+        }));
+        setItems(list.filter((i) => !Number.isNaN(i.id) && i.label !== ""));
+        setLoading(false);
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [source.url, source.valueKey, source.labelKey, source.moduleKey]);
+
+  const toggle = (id: number) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+
+  if (loading) {
+    return <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: 220, overflowY: "auto" }}>
+      {items.length === 0 ? (
+        <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>No items available</div>
+      ) : (
+        items.map((item) => {
+          const selected = value.includes(item.id);
+          return (
+            <label
+              key={item.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-sm)",
+                padding: "6px 8px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid",
+                borderColor: selected ? "var(--accent)" : "var(--rule)",
+                backgroundColor: selected ? "var(--accent-bg)" : "var(--surface)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+                color: "var(--ink-primary)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => toggle(item.id)}
+                style={{ cursor: "pointer" }}
+              />
+              <span style={{ flex: 1 }}>
+                {item.label}
+                {item.sublabel ? (
+                  <span style={{ color: "var(--ink-tertiary)", marginLeft: "6px" }}>
+                    {item.sublabel}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+          );
+        })
+      )}
+    </div>
   );
 }

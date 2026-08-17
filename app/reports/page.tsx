@@ -106,7 +106,15 @@ export default function ReportsPage() {
                       <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.pmOfficer || "—"}</td>
                       <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestType || "—"}</td>
                       <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.initiatedBy || "—"}</td>
-                      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.systemName || "—"}</td>
+                      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                        {(() => {
+                          const systems = project.systems ?? [];
+                          if (systems.length > 0) {
+                            return systems.map((s) => s.acronym || s.system).join(", ");
+                          }
+                          return project.systemName || "—";
+                        })()}
+                      </td>
                     </tr>
                   );
                 })

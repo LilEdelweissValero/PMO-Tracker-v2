@@ -19,6 +19,7 @@ export interface ProjectCreate {
   requestType?: string;
   pmOfficer?: string;
   remarks?: string;
+  systemEntryIds?: number[];
 }
 
 export interface ProjectUpdate extends Partial<ProjectCreate> {
@@ -61,12 +62,23 @@ export interface DirectoryCreate {
 export interface SystemModuleEntry {
   id: number;
   system: string;
+  acronym: string | null;
   module: string | null;
   developerAssigned: string | null;
   systemOwnerName: string | null;
   systemOwnerDept: string | null;
   archived: boolean;
   sortOrder: number;
+}
+
+export interface SystemAffected {
+  id: number;
+  system: string;
+  acronym: string | null;
+  module: string | null;
+  developerAssigned: string | null;
+  systemOwnerName: string | null;
+  systemOwnerDept: string | null;
 }
 
 export interface ConfigValueCreate {
@@ -123,6 +135,7 @@ export interface ProjectWithWorkStreams {
   createdAt: Date;
   updatedAt: Date;
   workStreams: WorkStreamWithStages[];
+  systems: SystemAffected[];
 }
 
 export interface LatestEntry {

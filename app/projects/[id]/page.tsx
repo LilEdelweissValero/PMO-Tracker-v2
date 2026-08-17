@@ -22,6 +22,7 @@ export default function ProjectDetailPage() {
   const [showBumpModal, setShowBumpModal] = useState<number | null>(null);
   const [bumpNote, setBumpNote] = useState("");
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
+  const [showManageSystems, setShowManageSystems] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +74,7 @@ export default function ProjectDetailPage() {
       });
   };
 
-  const updateProject = async (data: Record<string, string | number | ReferenceLink[]>) => {
+  const updateProject = async (data: Record<string, string | number | ReferenceLink[] | number[]>) => {
     const res = await fetch(`/api/project/${projectId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -128,7 +129,7 @@ export default function ProjectDetailPage() {
     showToast("Bump logged");
   };
 
-  const addWorkStream = async (data: Record<string, string | number>) => {
+  const addWorkStream = async (data: Record<string, string | number | number[]>) => {
     const res = await fetch("/api/work-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,13 +165,13 @@ export default function ProjectDetailPage() {
   const refs: ReferenceLink[] = Array.isArray(project.references) ? project.references : [];
 
   const metaFields = [
-    { label: "Priority", value: project.priority },
     { label: "PM Officer", value: project.pmOfficer },
     { label: "Request Type", value: project.requestType },
-    { label: "Initiated By", value: project.initiatedBy },
-    { label: "System", value: project.systemName },
-    { label: "Signoff", value: project.signoffStatus === "signed_off" ? "Signed Off" : "Not Signed Off" },
+    { label: "Project Owner", value: project.requestedByName },
   ];
+
+  const systems = Array.isArray(project.systems) ? project.systems : [];
+  const acronyms = systems.map((s) => s.acronym || s.system);
 
   return (
     <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
@@ -179,13 +180,15 @@ export default function ProjectDetailPage() {
         title={project.name}
         meta={metaFields}
         accentColor={statusColors.bg}
+        acronyms={acronyms}
+        status={{ label: status, colors: statusColors }}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-lg)", marginTop: "var(--space-lg)" }}>
         <Section title="Project Info">
           <FieldRow label="Name" value={project.name} onEdit={() => { playPrompt(); setEditingField("name"); }} />
           <FieldRow label="Priority" value={project.priority} onEdit={() => { playPrompt(); setEditingField("priority"); }} />
-          <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => { playPrompt(); setEditingField("scopeDescription"); }} multiline />
+          <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => { playPrompt(); setEditingField("scopeDescription"); }} multiline large />
           <div style={{ marginTop: "var(--space-sm)" }}>
             <div className="label-caps" style={{ marginBottom: "4px", color: "var(--ink-tertiary)" }}>References</div>
             <LinkEditor
@@ -195,22 +198,75 @@ export default function ProjectDetailPage() {
           </div>
         </Section>
 
-        <Section title="Initiated By">
+        <Section title="Project Owner">
           <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
-          <FieldRow label="Requested By" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
-          <FieldRow label="Department" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
+          <FieldRow label="Project Owner" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
+          <FieldRow label="Project Owner Dept" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
         </Section>
+      </div>
 
-        <Section title="System Info">
-          <FieldRow label="System" value={project.systemName} onEdit={() => { playPrompt(); setEditingField("systemName"); }} />
-          <FieldRow label="Module" value={project.specificModule} onEdit={() => { playPrompt(); setEditingField("specificModule"); }} />
-          <FieldRow label="Owner" value={project.systemOwnerName} onEdit={() => { playPrompt(); setEditingField("systemOwnerName"); }} />
-          <FieldRow label="Owner Dept" value={project.systemOwnerDept} onEdit={() => { playPrompt(); setEditingField("systemOwnerDept"); }} />
-          <FieldRow label="Request Type" value={project.requestType} onEdit={() => { playPrompt(); setEditingField("requestType"); }} />
-        </Section>
-
-        <Section title="Assignment">
-          <FieldRow label="PM Officer" value={project.pmOfficer} onEdit={() => { playPrompt(); setEditingField("pmOfficer"); }} />
+      <div style={{ marginTop: "var(--space-lg)" }}>
+        <Section title="System Affected">
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-sm)" }}>
+            <button
+              onClick={() => { playPrompt(); setShowManageSystems(true); }}
+              style={{
+                padding: "7px 12px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "var(--surface)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              Manage Systems
+            </button>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr>
+                {["System", "Module", "Owner", "Owner Dept", "Request Type", "Developer Assigned"].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: "8px 10px",
+                      textAlign: "left",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      letterSpacing: "0.07em",
+                      textTransform: "uppercase",
+                      backgroundColor: "var(--ground-metric)",
+                      borderBottom: "1px solid var(--rule-strong)",
+                      fontFamily: "var(--font-sans)",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {systems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                    No systems affected
+                  </td>
+                </tr>
+              ) : (
+                systems.map((sys) => (
+                  <tr key={sys.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                    <td style={{ padding: "8px 10px", fontWeight: 500 }}>{sys.system}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.module || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerName || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerDept || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestType || "—"}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.developerAssigned || "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </Section>
       </div>
 
@@ -361,6 +417,23 @@ export default function ProjectDetailPage() {
         ]}
         onSubmit={addWorkStream}
       />
+
+      <EntityFormModal
+        key={showManageSystems ? "systems-open" : "systems-closed"}
+        open={showManageSystems}
+        onClose={() => setShowManageSystems(false)}
+        title="Manage Systems Affected"
+        fields={[
+          { key: "systemEntryIds", label: "Systems Affected", type: "multisource", source: { url: "/api/directory-entry", valueKey: "id", labelKey: "system", moduleKey: "module" } },
+        ]}
+        initialData={{
+          systemEntryIds: systems.map((s) => s.id),
+        }}
+        onSubmit={async (data) => {
+          await updateProject({ systemEntryIds: (data.systemEntryIds as number[]) ?? [] });
+          setShowManageSystems(false);
+        }}
+      />
     </div>
   );
 }
@@ -387,8 +460,8 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   priority: "Priority",
   scopeDescription: "Scope Description",
   initiatedBy: "Initiated By",
-  requestedByName: "Requested By Name",
-  requestedByDept: "Requested By Dept",
+  requestedByName: "Project Owner",
+  requestedByDept: "Project Owner Dept",
   requestType: "Request Type",
   pmOfficer: "PM Officer",
   systemName: "System Name",
@@ -415,7 +488,54 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function FieldRow({ label, value, onEdit, multiline }: { label: string; value: string | null; onEdit: () => void; multiline?: boolean }) {
+function FieldRow({ label, value, onEdit, multiline, large }: { label: string; value: string | null; onEdit: () => void; multiline?: boolean; large?: boolean }) {
+  if (large) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          padding: "8px 0",
+          borderBottom: "1px solid var(--rule)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "13px", color: "var(--ink-secondary)", flexShrink: 0 }}>{label}</span>
+          <button
+            onClick={onEdit}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--accent)",
+              cursor: "pointer",
+              fontSize: "11px",
+              padding: "2px 4px",
+              flexShrink: 0,
+            }}
+          >
+            Edit
+          </button>
+        </div>
+        <div
+          style={{
+            fontSize: "14px",
+            lineHeight: 1.55,
+            color: value ? "var(--ink-primary)" : "var(--ink-tertiary)",
+            backgroundColor: "var(--ground)",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--radius-md)",
+            padding: "10px 12px",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {value || "—"}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{

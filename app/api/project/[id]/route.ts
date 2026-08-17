@@ -20,6 +20,9 @@ export async function GET(
         include: { flowStages: { where: { archived: false } } },
         orderBy: { sortOrder: "asc" },
       },
+      projectSystems: {
+        include: { systemModuleEntry: true },
+      },
     },
   });
 
@@ -27,7 +30,13 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(project);
+  const { projectSystems, ...rest } = project;
+  return NextResponse.json({
+    ...rest,
+    systems: projectSystems
+      .map((ps) => ps.systemModuleEntry)
+      .filter((s) => !s.archived),
+  });
 }
 
 export async function PATCH(
@@ -41,7 +50,10 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const existing = await prisma.project.findUnique({ where: { id: projectId } });
+  const existing = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { projectSystems: true },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -86,6 +98,27 @@ export async function PATCH(
       fieldName: "references",
       oldValue: JSON.stringify(existing.references),
       newValue: JSON.stringify(body.references),
+      changedBy: body.changedBy ?? "System",
+    });
+  }
+
+  if (body.systemEntryIds !== undefined) {
+    const systemEntryIds: number[] = Array.isArray(body.systemEntryIds)
+      ? body.systemEntryIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isFinite(id) && id > 0)
+      : [];
+    await prisma.projectSystem.deleteMany({ where: { projectId } });
+    if (systemEntryIds.length) {
+      await prisma.projectSystem.createMany({
+        data: systemEntryIds.map((systemModuleEntryId) => ({ projectId, systemModuleEntryId })),
+        skipDuplicates: true,
+      });
+    }
+    await logChange({
+      projectId,
+      entryType: "field_change",
+      fieldName: "systemEntryIds",
+      oldValue: JSON.stringify(existing.projectSystems ?? []),
+      newValue: JSON.stringify(systemEntryIds),
       changedBy: body.changedBy ?? "System",
     });
   }

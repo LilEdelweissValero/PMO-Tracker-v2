@@ -25,7 +25,7 @@ export default function ProjectsPage() {
 
   useEffect(() => { fetchProjects(); }, []);
 
-  const handleCreate = async (data: Record<string, string | number>) => {
+  const handleCreate = async (data: Record<string, string | number | number[]>) => {
     const res = await fetch("/api/project", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -131,7 +131,16 @@ export default function ProjectsPage() {
                       {project.name}
                     </Link>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.systemName || "—"}</td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                    {(() => {
+                      const systems = project.systems ?? [];
+                      if (systems.length > 0) {
+                        const labels = systems.map((s) => s.acronym || s.system);
+                        return labels.join(", ");
+                      }
+                      return project.systemName || "—";
+                    })()}
+                  </td>
                   <td style={{ padding: "8px 10px" }}>
                     <span
                       style={{
@@ -173,8 +182,7 @@ export default function ProjectsPage() {
           { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
-          { key: "systemName", label: "System", type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System", hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System", strict: true },
-          { key: "specificModule", label: "Module", type: "combo", source: { url: "/api/directory-entry", valueKey: "module" }, filterBy: "systemName", strict: true, hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
+          { key: "systemEntryIds", label: "Systems Affected", type: "multisource", source: { url: "/api/directory-entry", valueKey: "id", labelKey: "system", moduleKey: "module" }, hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
         ]}
         onSubmit={handleCreate}
