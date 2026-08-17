@@ -15,7 +15,10 @@ export default function ProjectsPage() {
 
   const fetchProjects = () => {
     fetch("/api/project")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load projects (${r.status})`);
+        return r.json();
+      })
       .then((d) => { setProjects(d); setLoading(false); })
       .catch(() => setLoading(false));
   };
