@@ -101,17 +101,20 @@ model ChangeLog {
   @@map("change_logs")
 }
 
-model DirectorySystem {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  details   String?
-  archived  Boolean  @default(false)
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+model SystemModuleEntry {
+  id                Int      @id @default(autoincrement())
+  system            String
+  module            String?
+  developerAssigned String?  @map("developer_assigned")
+  systemOwnerName   String?  @map("system_owner_name")
+  systemOwnerDept   String?  @map("system_owner_dept")
+  archived          Boolean  @default(false)
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([sortOrder])
-  @@map("directory_systems")
+  @@map("system_module_entries")
 }
 
 model DirectoryDepartment {

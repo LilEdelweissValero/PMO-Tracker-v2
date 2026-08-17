@@ -58,6 +58,17 @@ export interface DirectoryCreate {
   details?: string;
 }
 
+export interface SystemModuleEntry {
+  id: number;
+  system: string;
+  module: string | null;
+  developerAssigned: string | null;
+  systemOwnerName: string | null;
+  systemOwnerDept: string | null;
+  archived: boolean;
+  sortOrder: number;
+}
+
 export interface ConfigValueCreate {
   category: string;
   value: string;

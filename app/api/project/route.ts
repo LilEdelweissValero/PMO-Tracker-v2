@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `ID "${projectIdValue}" is already in use` }, { status: 409 });
   }
 
+  const requestTypeValue = typeof body.requestType === "string" ? body.requestType.trim() : "";
+  const systemNameValue = typeof body.systemName === "string" ? body.systemName.trim() : "";
+  const isNewSystem = requestTypeValue === "New System";
+  if (!isNewSystem && !systemNameValue) {
+    return NextResponse.json({ error: "System is required when Request Type is not New System" }, { status: 400 });
+  }
+
   try {
     const project = await prisma.project.create({
       data: {
@@ -57,11 +64,11 @@ export async function POST(request: NextRequest) {
         initiatedBy: body.initiatedBy || null,
         requestedByName: body.requestedByName || null,
         requestedByDept: body.requestedByDept || null,
-        systemName: body.systemName || null,
-        specificModule: body.specificModule || null,
+        systemName: systemNameValue || null,
+        specificModule: typeof body.specificModule === "string" ? body.specificModule.trim() || null : null,
         systemOwnerName: body.systemOwnerName || null,
         systemOwnerDept: body.systemOwnerDept || null,
-        requestType: body.requestType || null,
+        requestType: requestTypeValue || null,
         pmOfficer: body.pmOfficer || null,
         remarks: body.remarks || null,
       },

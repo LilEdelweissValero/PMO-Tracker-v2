@@ -172,6 +172,8 @@ export default function ProjectsPage() {
           { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
+          { key: "systemName", label: "System", type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
+          { key: "specificModule", label: "Module", type: "combo", source: { url: "/api/directory-entry", valueKey: "module" } },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
         ]}
         onSubmit={handleCreate}

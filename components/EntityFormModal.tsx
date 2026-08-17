@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Modal from "./Modal";
+import ComboField, { inputStyle } from "./ComboField";
 
 interface Field {
   key: string;
@@ -9,7 +10,9 @@ interface Field {
   type?: "text" | "textarea" | "select" | "number" | "combo";
   options?: { label: string; value: string }[];
   configCategory?: string;
+  source?: { url: string; valueKey: string };
   required?: boolean;
+  requiredIf?: (data: Record<string, string | number>) => boolean;
 }
 
 interface EntityFormModalProps {
@@ -21,17 +24,6 @@ interface EntityFormModalProps {
   onSubmit: (data: Record<string, string | number>) => Promise<void> | void;
   wide?: boolean;
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  border: "1px solid var(--rule)",
-  borderRadius: "var(--radius-md)",
-  backgroundColor: "var(--surface)",
-  color: "var(--ink-primary)",
-  fontSize: "13px",
-  fontFamily: "var(--font-sans)",
-  outline: "none",
-};
 
 export default function EntityFormModal({
   open,
@@ -90,28 +82,29 @@ export default function EntityFormModal({
               }}
             >
               {field.label}
-              {field.required && <span style={{ color: "var(--health-atrisk-ink)" }}> *</span>}
+              {(field.requiredIf ? field.requiredIf(formData) : field.required) && <span style={{ color: "var(--health-atrisk-ink)" }}> *</span>}
             </label>
             {field.type === "textarea" ? (
               <textarea
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(e) => updateField(field.key, e.target.value)}
-                required={field.required}
+                required={field.requiredIf ? field.requiredIf(formData) : field.required}
                 rows={3}
                 style={{ ...inputStyle, resize: "vertical" }}
               />
-            ) : field.type === "combo" && field.configCategory ? (
+            ) : field.type === "combo" && (field.configCategory || field.source) ? (
               <ComboField
                 configCategory={field.configCategory}
+                source={field.source}
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(v) => updateField(field.key, v)}
-                required={field.required}
+                required={field.requiredIf ? field.requiredIf(formData) : field.required}
               />
             ) : field.type === "select" ? (
               <select
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(e) => updateField(field.key, e.target.value)}
-                required={field.required}
+                required={field.requiredIf ? field.requiredIf(formData) : field.required}
                 style={inputStyle}
               >
                 <option value="">Select...</option>
@@ -126,7 +119,7 @@ export default function EntityFormModal({
                 type={field.type ?? "text"}
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(e) => updateField(field.key, field.type === "number" ? Number(e.target.value) : e.target.value)}
-                required={field.required}
+                required={field.requiredIf ? field.requiredIf(formData) : field.required}
                 style={inputStyle}
               />
             )}
@@ -181,180 +174,5 @@ export default function EntityFormModal({
         </div>
       </form>
     </Modal>
-  );
-}
-
-function ComboField({
-  configCategory,
-  value,
-  onChange,
-  required,
-}: {
-  configCategory: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-}) {
-  const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [typing, setTyping] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/config-value?category=${configCategory}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled) {
-          const seen = new Set<string>();
-          const unique = (data as { value: string }[])
-            .map((c) => ({ label: c.value, value: c.value }))
-            .filter((o) => {
-              if (seen.has(o.value)) return false;
-              seen.add(o.value);
-              return true;
-            });
-          setOptions(unique);
-          setLoading(false);
-        }
-      })
-      .catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [configCategory]);
-
-  const filtered = typing
-    ? options.filter((o) => o.value.toLowerCase().includes(value.trim().toLowerCase()))
-    : options;
-
-  const commitValue = useCallback((v: string) => {
-    const trimmed = v.trim();
-    onChange(trimmed);
-    if (trimmed && !options.some((o) => o.value === trimmed)) {
-      fetch("/api/config-value", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: configCategory, value: trimmed }),
-      }).catch(() => {});
-    }
-    setOpen(false);
-  }, [onChange, configCategory, options]);
-
-  const handleFocus = () => {
-    setTyping(false);
-    setOpen(true);
-    setHighlightIndex(
-      Math.max(0, options.findIndex((o) => o.value === value))
-    );
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
-    setTyping(true);
-    setOpen(true);
-    setHighlightIndex(0);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      e.preventDefault();
-      handleFocus();
-      return;
-    }
-    if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      e.preventDefault();
-      setHighlightIndex((prev) => {
-        const next = e.key === "ArrowDown" ? prev + 1 : prev - 1;
-        if (next < 0) return filtered.length - 1;
-        if (next >= filtered.length) return 0;
-        return next;
-      });
-      return;
-    }
-    if (open && e.key === "Enter") {
-      e.preventDefault();
-      if (highlightIndex >= 0 && filtered[highlightIndex]) {
-        commitValue(filtered[highlightIndex].value);
-      } else {
-        commitValue(value);
-      }
-      return;
-    }
-    if (open && e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-      return;
-    }
-    if (open && e.key === "Tab" && highlightIndex >= 0 && filtered[highlightIndex]) {
-      commitValue(filtered[highlightIndex].value);
-    }
-  };
-
-  const handleBlur = () => {
-    commitValue(value);
-  };
-
-  if (loading) {
-    return <input type="text" value="" readOnly style={inputStyle} placeholder="Loading..." />;
-  }
-
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        required={required}
-        aria-autocomplete="list"
-        style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
-      />
-      {open && filtered.length > 0 && (
-        <div
-          role="listbox"
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: 4,
-            backgroundColor: "var(--surface)",
-            border: "1px solid var(--rule)",
-            borderRadius: "var(--radius-md)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-            maxHeight: 220,
-            overflowY: "auto",
-            zIndex: 50,
-            padding: "4px",
-          }}
-        >
-          {filtered.map((opt, i) => (
-            <div
-              key={opt.value}
-              role="option"
-              aria-selected={i === highlightIndex}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => commitValue(opt.value)}
-              onMouseEnter={() => setHighlightIndex(i)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "var(--radius-sm)",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-sans)",
-                color: "var(--ink-primary)",
-                backgroundColor: i === highlightIndex ? "var(--accent-bg)" : "transparent",
-              }}
-            >
-              {opt.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
