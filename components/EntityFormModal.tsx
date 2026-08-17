@@ -47,6 +47,15 @@ export default function EntityFormModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const first = formRef.current?.querySelector(
+      "input, textarea, select"
+    ) as HTMLElement | null;
+    first?.focus();
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +77,7 @@ export default function EntityFormModal({
 
   return (
     <Modal open={open} onClose={onClose} title={title} wide={wide}>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+      <form ref={formRef} onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
         {fields.map((field) => (
           <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <label
