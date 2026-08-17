@@ -279,9 +279,17 @@ export default function ProjectDetailPage() {
               label: FIELD_LABEL_MAP[editingField] ?? editingField,
               type: (FIELD_TYPE_MAP[editingField]?.type as "text" | "textarea" | "combo") ?? "text",
               configCategory: FIELD_TYPE_MAP[editingField]?.configCategory,
+              source: FIELD_TYPE_MAP[editingField]?.source,
+              strict: FIELD_TYPE_MAP[editingField]?.strict,
+              filterBy: FIELD_TYPE_MAP[editingField]?.filterBy,
               required: true,
             }]}
-            initialData={{ [editingField]: String((project as unknown as Record<string, unknown>)[editingField] ?? "") }}
+            initialData={{
+              [editingField]: String((project as unknown as Record<string, unknown>)[editingField] ?? ""),
+              ...(FIELD_TYPE_MAP[editingField]?.filterBy ? {
+                [FIELD_TYPE_MAP[editingField].filterBy]: String((project as unknown as Record<string, unknown>)[FIELD_TYPE_MAP[editingField].filterBy] ?? ""),
+              } : {}),
+            }}
             onSubmit={(data) => { updateProject(data); setEditingField(null); }}
           />
         )}
@@ -357,7 +365,7 @@ export default function ProjectDetailPage() {
   );
 }
 
-const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string }> = {
+const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string; source?: { url: string; valueKey: string }; strict?: boolean; filterBy?: string }> = {
   projectId: { type: "text" },
   name: { type: "text" },
   priority: { type: "combo", configCategory: "priority" },
@@ -367,8 +375,8 @@ const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string }> 
   requestedByDept: { type: "combo", configCategory: "requested_by_dept" },
   requestType: { type: "combo", configCategory: "request_type" },
   pmOfficer: { type: "combo", configCategory: "pm_officer" },
-  systemName: { type: "text" },
-  specificModule: { type: "text" },
+  systemName: { type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, strict: true },
+  specificModule: { type: "combo", source: { url: "/api/directory-entry", valueKey: "module" }, strict: true, filterBy: "systemName" },
   systemOwnerName: { type: "text" },
   systemOwnerDept: { type: "text" },
 };

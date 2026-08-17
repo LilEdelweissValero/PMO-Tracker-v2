@@ -51,12 +51,12 @@ export default function ProjectsPage() {
   const columns = [
     { key: "id", label: "ID", width: "70px", zone: "identity" as const },
     { key: "name", label: "Project Name", zone: "identity" as const },
-    { key: "status", label: "Status", zone: "metric" as const },
+    { key: "systemName", label: "System", width: "220px", zone: "metric" as const },
+    { key: "status", label: "Status", width: "90px", zone: "metric" as const },
     { key: "priority", label: "Priority", width: "80px", zone: "metric" as const },
     { key: "pmOfficer", label: "PM Officer", zone: "metric" as const },
     { key: "requestType", label: "Request Type", zone: "metric" as const },
     { key: "initiatedBy", label: "Initiated By", zone: "metric" as const },
-    { key: "systemName", label: "System", zone: "metric" as const },
   ];
 
   return (
@@ -131,6 +131,7 @@ export default function ProjectsPage() {
                       {project.name}
                     </Link>
                   </td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.systemName || "—"}</td>
                   <td style={{ padding: "8px 10px" }}>
                     <span
                       style={{
@@ -150,7 +151,6 @@ export default function ProjectsPage() {
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.pmOfficer || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestType || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.initiatedBy || "—"}</td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.systemName || "—"}</td>
                 </tr>
               );
             })}
@@ -172,8 +172,8 @@ export default function ProjectsPage() {
           { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
-          { key: "systemName", label: "System", type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
-          { key: "specificModule", label: "Module", type: "combo", source: { url: "/api/directory-entry", valueKey: "module" } },
+          { key: "systemName", label: "System", type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System", hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System", strict: true },
+          { key: "specificModule", label: "Module", type: "combo", source: { url: "/api/directory-entry", valueKey: "module" }, filterBy: "systemName", strict: true, hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
         ]}
         onSubmit={handleCreate}

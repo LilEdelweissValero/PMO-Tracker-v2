@@ -13,6 +13,10 @@ interface Field {
   source?: { url: string; valueKey: string };
   required?: boolean;
   requiredIf?: (data: Record<string, string | number>) => boolean;
+  hiddenIf?: (data: Record<string, string | number>) => boolean;
+  strict?: boolean;
+  filterBy?: string;
+  sourceFilterKey?: string;
 }
 
 interface EntityFormModalProps {
@@ -54,7 +58,12 @@ export default function EntityFormModal({
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit(formData);
+      const payload: Record<string, string | number> = {};
+      for (const field of fields) {
+        if (field.hiddenIf?.(formData)) continue;
+        if (field.key in formData) payload[field.key] = formData[field.key];
+      }
+      await onSubmit(payload);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -70,7 +79,9 @@ export default function EntityFormModal({
   return (
     <Modal open={open} onClose={onClose} title={title} wide={wide}>
       <form ref={formRef} onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-        {fields.map((field) => (
+        {fields.map((field) => {
+          if (field.hiddenIf?.(formData)) return null;
+          return (
           <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <label
               style={{
@@ -99,6 +110,9 @@ export default function EntityFormModal({
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(v) => updateField(field.key, v)}
                 required={field.requiredIf ? field.requiredIf(formData) : field.required}
+                strict={field.strict}
+                relatedValue={field.filterBy ? (formData[field.filterBy] as string) ?? "" : undefined}
+                sourceFilterKey={field.sourceFilterKey}
               />
             ) : field.type === "select" ? (
               <select
@@ -124,7 +138,8 @@ export default function EntityFormModal({
               />
             )}
           </div>
-        ))}
+          );
+        })}
         {error && (
           <div style={{
             padding: "8px 12px",

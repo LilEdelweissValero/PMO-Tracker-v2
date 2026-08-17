@@ -19,6 +19,9 @@ interface ComboFieldProps {
   required?: boolean;
   configCategory?: string;
   source?: { url: string; valueKey: string };
+  strict?: boolean;
+  sourceFilterKey?: string;
+  relatedValue?: string;
 }
 
 export default function ComboField({
@@ -27,12 +30,16 @@ export default function ComboField({
   required,
   configCategory,
   source,
+  strict,
+  sourceFilterKey,
+  relatedValue,
 }: ComboFieldProps) {
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [typing, setTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef<string>(value);
 
   const sourceUrl = source
     ? source.url
@@ -51,8 +58,14 @@ export default function ComboField({
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) {
+          const items = (data as Record<string, unknown>[]).filter(
+            (item) =>
+              !sourceFilterKey ||
+              !relatedValue ||
+              String(item[sourceFilterKey] ?? "") === String(relatedValue)
+          );
           const raw = sourceValueKey
-            ? (data as Record<string, unknown>[])
+            ? items
                 .map((item) => String(item[sourceValueKey] ?? "").trim())
                 .filter((v) => v !== "")
                 .map((v) => ({ value: v }))
@@ -71,7 +84,24 @@ export default function ComboField({
       })
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [sourceUrl, sourceValueKey]);
+  }, [sourceUrl, sourceValueKey, sourceFilterKey, relatedValue]);
+
+  const relatedSettledRef = useRef<{ key: string; loaded: boolean }>({ key: "", loaded: false });
+
+  useEffect(() => {
+    if (!strict || !relatedValue) return;
+    const settled = relatedSettledRef.current;
+    if (settled.key !== relatedValue) {
+      relatedSettledRef.current = { key: relatedValue, loaded: false };
+      return;
+    }
+    if (settled.loaded || loading) return;
+    relatedSettledRef.current = { key: relatedValue, loaded: true };
+    if (value.trim() && options.length > 0 && !options.some((o) => o.value === value.trim())) {
+      onChange("");
+      committedRef.current = "";
+    }
+  }, [strict, relatedValue, value, options, loading, onChange]);
 
   const filtered = typing
     ? options.filter((o) => o.value.toLowerCase().includes(value.trim().toLowerCase()))
@@ -79,7 +109,13 @@ export default function ComboField({
 
   const commitValue = useCallback((v: string) => {
     const trimmed = v.trim();
+    if (strict && trimmed && !options.some((o) => o.value === trimmed)) {
+      onChange(committedRef.current);
+      setOpen(false);
+      return;
+    }
     onChange(trimmed);
+    committedRef.current = trimmed;
     if (configCategory && trimmed && !options.some((o) => o.value === trimmed)) {
       fetch("/api/config-value", {
         method: "POST",
@@ -88,7 +124,7 @@ export default function ComboField({
       }).catch(() => {});
     }
     setOpen(false);
-  }, [onChange, configCategory, options]);
+  }, [onChange, configCategory, options, strict]);
 
   const handleFocus = () => {
     setTyping(false);
