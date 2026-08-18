@@ -83,6 +83,7 @@ model FlowStage {
   orderIdx         Int       @map("order_idx")
   plannedDate      DateTime? @map("planned_date")
   actualDate       DateTime? @map("actual_date")
+  responsibleGroup String?   @map("responsible_group")
   responsiblePerson String?  @map("responsible_person")
   archived         Boolean   @default(false)
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -162,4 +163,18 @@ model ConfigValue {
   @@index([category])
   @@index([sortOrder])
   @@map("config_values")
+}
+
+model UnitInvolved {
+  id        Int      @id @default(autoincrement())
+  group     String
+  name      String
+  sortOrder Int      @default(0) @map("sort_order")
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([group])
+  @@index([sortOrder])
+  @@map("unit_involved")
 }

@@ -88,7 +88,7 @@ export function getHealthColorClass(health: string): { bg: string; ink: string }
 }
 
 export function buildStagesWithDerived(
-  stages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsiblePerson: string | null }[]
+  stages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[]
 ): FlowStageWithDerived[] {
   return stages
     .sort((a, b) => a.orderIdx - b.orderIdx)
@@ -109,7 +109,7 @@ export function buildWorkStreamWithDerived(
     sortOrder: number;
     createdAt: Date;
     updatedAt: Date;
-    flowStages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsiblePerson: string | null }[];
+    flowStages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[];
   }
 ): WorkStreamWithStages {
   const stages = buildStagesWithDerived(ws.flowStages);

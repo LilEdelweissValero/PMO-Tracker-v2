@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ComboField, { inputStyle } from "@/components/ComboField";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { SystemModuleEntry } from "@/lib/types";
+import type { SystemModuleEntry, UnitInvolved } from "@/lib/types";
 
 interface DepartmentItem {
   id: number;
@@ -14,10 +14,17 @@ interface DepartmentItem {
 
 const columns = ["System", "Acronym", "Module", "Developer Assigned", "System Owner (Name)", "System Owner (Department)", "Actions"];
 
+const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+
+const DEVELOPER_SOURCE = { url: "/api/unit-involved?group=Developers", valueKey: "name" };
+const OWNER_SOURCE = { url: `/api/unit-involved?group=${encodeURIComponent("System Owner")}`, valueKey: "name" };
+
 export default function DirectoryPage() {
-  const [tab, setTab] = useState<"systems" | "departments">("systems");
+  const [tab, setTab] = useState<"systems" | "departments" | "units">("systems");
   const [entries, setEntries] = useState<SystemModuleEntry[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [units, setUnits] = useState<UnitInvolved[]>([]);
+  const [unitGroups, setUnitGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [loading, setLoading] = useState(true);
   const [entriesVersion, setEntriesVersion] = useState(0);
 
@@ -40,16 +47,31 @@ export default function DirectoryPage() {
   const [editName, setEditName] = useState("");
   const [editDetails, setEditDetails] = useState("");
 
+  const [newUnitGroup, setNewUnitGroup] = useState("");
+  const [newUnitName, setNewUnitName] = useState("");
+  const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
+  const [editUnitGroup, setEditUnitGroup] = useState("");
+  const [editUnitName, setEditUnitName] = useState("");
+
   const fetchAll = async () => {
-    const [entryRes, deptRes] = await Promise.all([
+    const [entryRes, deptRes, unitRes, configRes] = await Promise.all([
       fetch("/api/directory-entry"),
       fetch("/api/directory-department"),
+      fetch("/api/unit-involved"),
+      fetch("/api/config-value?category=ball_groups"),
     ]);
     if (entryRes.ok) {
       setEntries(await entryRes.json());
       setEntriesVersion((v) => v + 1);
     }
     if (deptRes.ok) setDepartments(await deptRes.json());
+    if (unitRes.ok) setUnits(await unitRes.json());
+    if (configRes.ok) {
+      const groups = (await configRes.json() as { value: string }[])
+        .map((c) => c.value)
+        .filter((v) => v.trim());
+      if (groups.length) setUnitGroups(groups);
+    }
     setLoading(false);
   };
 
@@ -58,11 +80,20 @@ export default function DirectoryPage() {
     Promise.all([
       fetch("/api/directory-entry").then((r) => r.json()),
       fetch("/api/directory-department").then((r) => r.json()),
+      fetch("/api/unit-involved").then((r) => r.json()),
+      fetch("/api/config-value?category=ball_groups")
+        .then((r) => r.json())
+        .catch(() => [] as { value: string }[]),
     ])
-      .then(([e, d]) => {
+      .then(([e, d, u, config]) => {
         if (!cancelled) {
           setEntries(e);
           setDepartments(d);
+          setUnits(u);
+          const groups = (config as { value: string }[])
+            .map((c) => c.value)
+            .filter((v) => v.trim());
+          if (groups.length) setUnitGroups(groups);
           setLoading(false);
         }
       })
@@ -166,6 +197,74 @@ export default function DirectoryPage() {
     showToast("Entry deleted");
   };
 
+  const addUnit = async () => {
+    const group = (newUnitGroup || unitGroups[0] || "").trim();
+    const name = newUnitName.trim();
+    if (!group || !name) return;
+    const res = await fetch("/api/unit-involved", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ group, name }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      showToast(body?.error ?? "Failed to add entry");
+      return;
+    }
+    setNewUnitName("");
+    setNewUnitGroup("");
+    fetchAll();
+    playPing();
+    showToast("Entry added");
+  };
+
+  const updateUnit = async (id: number) => {
+    const res = await fetch(`/api/unit-involved/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ group: editUnitGroup, name: editUnitName }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      showToast(body?.error ?? "Failed to update entry");
+      return;
+    }
+    setEditingUnitId(null);
+    fetchAll();
+    playPing();
+    showToast("Entry updated");
+  };
+
+  const deleteUnit = async (id: number) => {
+    await fetch(`/api/unit-involved/${id}`, { method: "DELETE" });
+    fetchAll();
+    playPing();
+    showToast("Entry deleted");
+  };
+
+  const renderTableHeader = (headers: string[]) => (
+    <tr>
+      {headers.map((h) => (
+        <th
+          key={h}
+          style={{
+            padding: "8px 10px",
+            textAlign: "left",
+            fontSize: "10px",
+            fontWeight: 600,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            backgroundColor: "var(--ground-metric)",
+            borderBottom: "1px solid var(--rule-strong)",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          {h}
+        </th>
+      ))}
+    </tr>
+  );
+
   return (
     <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
       <h1 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 750, lineHeight: 1.1, marginBottom: "var(--space-md)" }}>
@@ -173,23 +272,27 @@ export default function DirectoryPage() {
       </h1>
 
       <div style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
-        {(["systems", "departments"] as const).map((t) => (
+        {([
+          { key: "systems", label: "Systems" },
+          { key: "departments", label: "Departments" },
+          { key: "units", label: "Units Involved" },
+        ] as const).map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={t.key}
+            onClick={() => setTab(t.key)}
             style={{
               padding: "6px 14px",
               border: "1px solid var(--rule)",
               borderRadius: "var(--radius-md)",
-              backgroundColor: tab === t ? "var(--ink-primary)" : "var(--surface)",
-              color: tab === t ? "var(--ink-on-dark)" : "var(--ink-primary)",
+              backgroundColor: tab === t.key ? "var(--ink-primary)" : "var(--surface)",
+              color: tab === t.key ? "var(--ink-on-dark)" : "var(--ink-primary)",
               cursor: "pointer",
               fontSize: "13px",
               fontFamily: "var(--font-sans)",
               textTransform: "capitalize",
             }}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>
@@ -223,11 +326,23 @@ export default function DirectoryPage() {
               </div>
               <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Developer Assigned</span>
-                <input type="text" value={newDeveloper} onChange={(e) => setNewDeveloper(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+                <ComboField
+                  key={`dev-new-${entriesVersion}`}
+                  source={DEVELOPER_SOURCE}
+                  value={newDeveloper}
+                  onChange={setNewDeveloper}
+                  strict
+                />
               </div>
               <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>System Owner (Name)</span>
-                <input type="text" value={newOwnerName} onChange={(e) => setNewOwnerName(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+                <ComboField
+                  key={`own-new-${entriesVersion}`}
+                  source={OWNER_SOURCE}
+                  value={newOwnerName}
+                  onChange={setNewOwnerName}
+                  strict
+                />
               </div>
               <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>System Owner (Dept)</span>
@@ -259,26 +374,7 @@ export default function DirectoryPage() {
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  <tr>
-                    {columns.map((h) => (
-                      <th
-                        key={h}
-                        style={{
-                          padding: "8px 10px",
-                          textAlign: "left",
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          letterSpacing: "0.07em",
-                          textTransform: "uppercase",
-                          backgroundColor: "var(--ground-metric)",
-                          borderBottom: "1px solid var(--rule-strong)",
-                          fontFamily: "var(--font-sans)",
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
+                  {renderTableHeader(columns)}
                 </thead>
                 <tbody>
                   {entries.length === 0 ? (
@@ -313,14 +409,30 @@ export default function DirectoryPage() {
                         </td>
                         <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editDeveloper} onChange={(e) => setEditDeveloper(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }} />
+                            <div style={{ minWidth: "120px" }}>
+                              <ComboField
+                                key={`dev-edit-${entry.id}`}
+                                source={DEVELOPER_SOURCE}
+                                value={editDeveloper}
+                                onChange={setEditDeveloper}
+                                strict
+                              />
+                            </div>
                           ) : (
                             entry.developerAssigned || "—"
                           )}
                         </td>
                         <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editOwnerName} onChange={(e) => setEditOwnerName(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }} />
+                            <div style={{ minWidth: "140px" }}>
+                              <ComboField
+                                key={`own-edit-${entry.id}`}
+                                source={OWNER_SOURCE}
+                                value={editOwnerName}
+                                onChange={setEditOwnerName}
+                                strict
+                              />
+                            </div>
                           ) : (
                             entry.systemOwnerName || "—"
                           )}
@@ -363,7 +475,7 @@ export default function DirectoryPage() {
             </div>
           )}
         </>
-      ) : (
+      ) : tab === "departments" ? (
         <>
           <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
             <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
@@ -408,26 +520,7 @@ export default function DirectoryPage() {
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  <tr>
-                    {["Name", "Details", "Actions"].map((h) => (
-                      <th
-                        key={h}
-                        style={{
-                          padding: "8px 10px",
-                          textAlign: "left",
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          letterSpacing: "0.07em",
-                          textTransform: "uppercase",
-                          backgroundColor: "var(--ground-metric)",
-                          borderBottom: "1px solid var(--rule-strong)",
-                          fontFamily: "var(--font-sans)",
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
+                  {renderTableHeader(["Name", "Details", "Actions"])}
                 </thead>
                 <tbody>
                   {departments.length === 0 ? (
@@ -479,6 +572,129 @@ export default function DirectoryPage() {
                               </button>
                               <button
                                 onClick={() => deleteDepartment(item.id)}
+                                style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
+            <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
+            <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Group</span>
+                <select
+                  value={newUnitGroup || unitGroups[0] || ""}
+                  onChange={(e) => setNewUnitGroup(e.target.value)}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+                >
+                  {unitGroups.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 240px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Name *</span>
+                <input
+                  type="text"
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addUnit(); }}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+              <button
+                onClick={addUnit}
+                disabled={!newUnitName.trim()}
+                style={{
+                  padding: "7px 12px",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: "var(--accent)",
+                  color: "#FFFFFF",
+                  cursor: newUnitName.trim() ? "pointer" : "not-allowed",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  opacity: newUnitName.trim() ? 1 : 0.5,
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
+          ) : (
+            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  {renderTableHeader(["Group", "Name", "Actions"])}
+                </thead>
+                <tbody>
+                  {units.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                        No items
+                      </td>
+                    </tr>
+                  ) : (
+                    units.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingUnitId === item.id ? (
+                            <select
+                              value={editUnitGroup || unitGroups[0] || ""}
+                              onChange={(e) => setEditUnitGroup(e.target.value)}
+                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
+                            >
+                              {unitGroups.map((g) => (
+                                <option key={g} value={g}>{g}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            item.group
+                          )}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingUnitId === item.id ? (
+                            <input
+                              type="text"
+                              value={editUnitName}
+                              onChange={(e) => setEditUnitName(e.target.value)}
+                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
+                            />
+                          ) : (
+                            item.name
+                          )}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingUnitId === item.id ? (
+                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                              <button onClick={() => updateUnit(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
+                              <button onClick={() => setEditingUnitId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                              <button
+                                onClick={() => { setEditingUnitId(item.id); setEditUnitGroup(item.group); setEditUnitName(item.name); }}
+                                style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteUnit(item.id)}
                                 style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
                               >
                                 Delete

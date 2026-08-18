@@ -40,6 +40,7 @@ export interface FlowStageUpdate {
   orderIdx?: number;
   plannedDate?: string | null;
   actualDate?: string | null;
+  responsibleGroup?: string | null;
   responsiblePerson?: string | null;
 }
 
@@ -96,6 +97,14 @@ export interface SystemAffected {
   systemOwnerDept: string | null;
 }
 
+export interface UnitInvolved {
+  id: number;
+  group: string;
+  name: string;
+  sortOrder: number;
+  archived: boolean;
+}
+
 export interface ConfigValueCreate {
   category: string;
   value: string;
@@ -109,6 +118,7 @@ export interface FlowStageWithDerived {
   orderIdx: number;
   plannedDate: Date | null;
   actualDate: Date | null;
+  responsibleGroup: string | null;
   responsiblePerson: string | null;
   delayAdvanceDays: number | null;
 }

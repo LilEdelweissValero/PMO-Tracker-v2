@@ -11,7 +11,7 @@ import EntityFormModal from "@/components/EntityFormModal";
 import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry } from "@/lib/types";
+import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved } from "@/lib/types";
 
 const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
 
@@ -33,6 +33,7 @@ export default function ProjectDetailPage() {
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
   const [showManageSystems, setShowManageSystems] = useState(false);
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
+  const [units, setUnits] = useState<UnitInvolved[]>([]);
   const [bumpState, setBumpState] = useState<BumpState | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
@@ -49,6 +50,12 @@ export default function ProjectDetailPage() {
             .filter((v) => v.trim());
           if (groups.length) setBallGroups(groups);
         }
+      })
+      .catch(() => {});
+    fetch("/api/unit-involved")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setUnits(data as UnitInvolved[]);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -119,7 +126,7 @@ export default function ProjectDetailPage() {
     showToast("Project updated");
   };
 
-  const updateWorkStream = async (wsId: number, data: Record<string, string | number>) => {
+  const updateWorkStream = async (wsId: number, data: Record<string, string | number | null>) => {
     await fetch(`/api/work-stream/${wsId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -419,7 +426,9 @@ export default function ProjectDetailPage() {
             key={ws.id}
             ws={ws}
             ballGroups={ballGroups}
+            units={units}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
+            onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
             onUpdateBall={(ball) => updateWorkStream(ws.id, { currentBall: ball })}
             onUpdateStage={(stageId, data) => updateStage(stageId, data)}
             onReorderStage={(stageId, direction) => reorderStage(ws.id, stageId, direction)}
@@ -668,7 +677,7 @@ export default function ProjectDetailPage() {
         title="Add Work Stream"
         fields={[
           { key: "name", label: "Work Stream Name" },
-          { key: "assignedDeveloper", label: "Assigned Developer" },
+          { key: "assignedDeveloper", label: "Assigned Developer", type: "combo", source: { url: "/api/unit-involved?group=Developers", valueKey: "name" }, strict: true },
         ]}
         onSubmit={addWorkStream}
       />
@@ -840,7 +849,9 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
 function WorkStreamCard({
   ws,
   ballGroups,
+  units,
   onUpdateName,
+  onUpdateDeveloper,
   onUpdateBall,
   onUpdateStage,
   onReorderStage,
@@ -851,7 +862,9 @@ function WorkStreamCard({
 }: {
   ws: WorkStreamWithStages;
   ballGroups: string[];
+  units: UnitInvolved[];
   onUpdateName: (name: string) => void;
+  onUpdateDeveloper: (developer: string | null) => void;
   onUpdateBall: (ball: string) => void;
   onUpdateStage: (stageId: number, data: Record<string, string | number | null>) => void;
   onReorderStage: (stageId: number, direction: "up" | "down") => void;
@@ -863,6 +876,7 @@ function WorkStreamCard({
   const health = computeHealth(ws.currentStage);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(ws.name ?? "");
+  const [nameHovered, setNameHovered] = useState(false);
   const [renamingStage, setRenamingStage] = useState<number | null>(null);
   const [stageNameValue, setStageNameValue] = useState("");
 
@@ -870,6 +884,15 @@ function WorkStreamCard({
   const latestBump = ws.latestBump ?? null;
   const bumpMsg = latestBump?.note || null;
   const lastBumped = latestBump ? (latestBump.bumpDate ? new Date(latestBump.bumpDate) : new Date(latestBump.changedAt)) : null;
+
+  const developers = units
+    .filter((u) => u.group.toLowerCase() === "developers")
+    .map((u) => u.name);
+
+  const namesForGroup = (group: string) =>
+    units
+      .filter((u) => u.group.toLowerCase() === group.toLowerCase())
+      .map((u) => u.name);
 
   const commitName = () => {
     const trimmed = nameValue.trim();
@@ -913,14 +936,31 @@ function WorkStreamCard({
               }}
             />
           ) : (
-            <span style={{ fontWeight: 600, fontSize: "14px" }}>{ws.name || "Work Stream"}</span>
+            <span
+              onMouseEnter={() => setNameHovered(true)}
+              onMouseLeave={() => setNameHovered(false)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "4px", cursor: "default" }}
+            >
+              <span style={{ fontWeight: 600, fontSize: "14px" }}>{ws.name || "Work Stream"}</span>
+              <button
+                onClick={() => { setEditingName(true); setNameValue(ws.name ?? ""); }}
+                title="Edit work stream name"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--accent)",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  padding: "0",
+                  lineHeight: 1,
+                  opacity: nameHovered ? 1 : 0,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                ✎
+              </button>
+            </span>
           )}
-          <button
-            onClick={() => { setEditingName(true); setNameValue(ws.name ?? ""); }}
-            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "11px", padding: "2px 4px" }}
-          >
-            Edit
-          </button>
           <HealthBadge health={health} />
         </div>
         <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center", flexWrap: "wrap" }}>
@@ -972,15 +1012,34 @@ function WorkStreamCard({
         </div>
       </div>
 
-      <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)" }}>
-        Developer: {ws.assignedDeveloper || "Unassigned"}
+      <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)", display: "flex", alignItems: "center", gap: "6px" }}>
+        Developer:
+        <select
+          value={ws.assignedDeveloper ?? ""}
+          onChange={(e) => onUpdateDeveloper(e.target.value || null)}
+          style={{
+            padding: "2px 6px",
+            border: "1px solid var(--rule)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "12px",
+            fontFamily: "var(--font-sans)",
+            outline: "none",
+            backgroundColor: "var(--surface)",
+            color: ws.assignedDeveloper ? "var(--ink-primary)" : "var(--ink-tertiary)",
+          }}
+        >
+          <option value="">Unassigned</option>
+          {developers.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
       </div>
 
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
           <thead>
             <tr>
-              {["⇅", "Stage", "Planned", "Actual", "▲▼", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
+              {["⇅", "Stage", "Planned", "Actual", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -1082,30 +1141,60 @@ function WorkStreamCard({
                     {stage.delayAdvanceDays === null || stage.delayAdvanceDays === 0 ? (
                       <span style={{ color: "var(--ink-tertiary)" }}>—</span>
                     ) : stage.delayAdvanceDays > 0 ? (
-                      <span style={{ color: "var(--health-atrisk-ink)", fontWeight: 700 }} title={`Delayed by ${stage.delayAdvanceDays}d`}>▼</span>
+                      <span style={{ color: "var(--health-atrisk-ink)", fontWeight: 700 }} title={`Delayed by ${stage.delayAdvanceDays}d`}>
+                        +{stage.delayAdvanceDays}
+                      </span>
                     ) : (
-                      <span style={{ color: "var(--health-ontime-ink)", fontWeight: 700 }} title={`Advanced by ${Math.abs(stage.delayAdvanceDays)}d`}>▲</span>
+                      <span style={{ color: "var(--health-ontime-ink)", fontWeight: 700 }} title={`Advanced by ${Math.abs(stage.delayAdvanceDays)}d`}>
+                        −{Math.abs(stage.delayAdvanceDays)}
+                      </span>
                     )}
                   </td>
-                  <td style={{ padding: "6px 8px", color: "var(--ink-secondary)" }}>
-                    <select
-                      value={stage.responsiblePerson ?? ""}
-                      onChange={(e) => onUpdateStage(stage.id, { responsiblePerson: e.target.value || null })}
-                      style={{
-                        padding: "2px 6px",
-                        border: "1px solid var(--rule)",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "12px",
-                        fontFamily: "var(--font-sans)",
-                        outline: "none",
-                        backgroundColor: "var(--surface)",
-                      }}
-                    >
-                      <option value="">—</option>
-                      {ballGroups.map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
+                  <td style={{ padding: "6px 8px" }}>
+                    <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                      <select
+                        value={stage.responsibleGroup ?? ""}
+                        onChange={(e) => onUpdateStage(stage.id, { responsibleGroup: e.target.value || null, responsiblePerson: null })}
+                        title="Responsible group"
+                        style={{
+                          padding: "2px 4px",
+                          border: "1px solid var(--rule)",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "12px",
+                          fontFamily: "var(--font-sans)",
+                          outline: "none",
+                          backgroundColor: "var(--surface)",
+                          maxWidth: "96px",
+                        }}
+                      >
+                        <option value="">—</option>
+                        {ballGroups.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={stage.responsiblePerson ?? ""}
+                        onChange={(e) => onUpdateStage(stage.id, { responsiblePerson: e.target.value || null })}
+                        disabled={!stage.responsibleGroup}
+                        title="Responsible person"
+                        style={{
+                          padding: "2px 4px",
+                          border: "1px solid var(--rule)",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "12px",
+                          fontFamily: "var(--font-sans)",
+                          outline: "none",
+                          backgroundColor: "var(--surface)",
+                          opacity: stage.responsibleGroup ? 1 : 0.5,
+                          maxWidth: "116px",
+                        }}
+                      >
+                        <option value="">—</option>
+                        {namesForGroup(stage.responsibleGroup ?? "").map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
                   </td>
                   <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {bumpMsg || "—"}

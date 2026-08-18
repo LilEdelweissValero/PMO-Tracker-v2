@@ -38,6 +38,7 @@ export async function PATCH(
       orderIdx: body.orderIdx !== undefined ? body.orderIdx : existing.orderIdx,
       plannedDate,
       actualDate,
+      responsibleGroup: body.responsibleGroup !== undefined ? body.responsibleGroup : existing.responsibleGroup,
       responsiblePerson: body.responsiblePerson !== undefined ? body.responsiblePerson : existing.responsiblePerson,
     },
   });
@@ -95,6 +96,18 @@ export async function PATCH(
       fieldName: "stage_order",
       oldValue: String(existing.orderIdx),
       newValue: String(body.orderIdx),
+      changedBy: body.changedBy ?? "System",
+    });
+  }
+
+  if (body.responsibleGroup !== undefined && body.responsibleGroup !== existing.responsibleGroup) {
+    await logChange({
+      workStreamId: existing.workStreamId,
+      projectId: existing.workStream.projectId,
+      entryType: "field_change",
+      fieldName: "responsible_group",
+      oldValue: existing.responsibleGroup ?? "",
+      newValue: body.responsibleGroup ?? "",
       changedBy: body.changedBy ?? "System",
     });
   }

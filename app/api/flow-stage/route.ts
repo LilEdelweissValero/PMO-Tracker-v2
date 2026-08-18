@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
           : (maxOrder._max.orderIdx ?? -1) + 1,
       plannedDate: body.plannedDate ? new Date(body.plannedDate) : null,
       actualDate: body.actualDate ? new Date(body.actualDate) : null,
+      responsibleGroup: body.responsibleGroup ?? null,
       responsiblePerson: body.responsiblePerson ?? null,
     },
   });
