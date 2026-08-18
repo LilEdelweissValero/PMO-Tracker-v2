@@ -1,8 +1,24 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
+import SortableRow from "@/components/SortableRow";
 
 interface ConfigItem {
   id: number;
@@ -95,27 +111,37 @@ export default function AdminPage() {
     showToast("Value deleted");
   };
 
-  const moveItem = async (id: number, direction: "up" | "down") => {
-    const idx = filtered.findIndex((c) => c.id === id);
-    if (idx === -1) return;
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= filtered.length) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-    const item = filtered[idx];
-    const swap = filtered[swapIdx];
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    await Promise.all([
-      fetch(`/api/config-value/${item.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sortOrder: swap.sortOrder }),
-      }),
-      fetch(`/api/config-value/${swap.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sortOrder: item.sortOrder }),
-      }),
-    ]);
+    const oldIndex = filtered.findIndex((c) => String(c.id) === active.id);
+    const newIndex = filtered.findIndex((c) => String(c.id) === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(filtered, oldIndex, newIndex);
+
+    setConfigs((prev) =>
+      prev.map((c) => {
+        const idx = reordered.findIndex((n) => n.id === c.id);
+        return idx === -1 ? c : { ...c, sortOrder: idx };
+      })
+    );
+
+    await Promise.all(
+      reordered.map((item, idx) =>
+        fetch(`/api/config-value/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: idx }),
+        })
+      )
+    );
     refetch();
   };
 
@@ -192,7 +218,7 @@ export default function AdminPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["#", "Value", "Actions"].map((h) => (
+                {["", "#", "Value", "Actions"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -215,47 +241,49 @@ export default function AdminPage() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                  <td colSpan={4} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                     No values configured
                   </td>
                 </tr>
               ) : (
-                filtered.map((item, idx) => (
-                  <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                    <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums", color: "var(--ink-tertiary)" }}>
-                      {idx + 1}
-                    </td>
-                    <td style={{ padding: "8px 10px" }}>
-                      {editingId === item.id ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") updateItem(item.id); }}
-                          style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
-                          autoFocus
-                        />
-                      ) : (
-                        item.value
-                      )}
-                    </td>
-                    <td style={{ padding: "8px 10px" }}>
-                      {editingId === item.id ? (
-                        <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                          <button onClick={() => updateItem(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
-                          <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                          <button onClick={() => moveItem(item.id, "up")} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? "var(--ink-tertiary)" : "var(--accent)", cursor: idx === 0 ? "default" : "pointer", fontSize: "12px", opacity: idx === 0 ? 0.5 : 1 }}>Up</button>
-                          <button onClick={() => moveItem(item.id, "down")} disabled={idx === filtered.length - 1} style={{ background: "none", border: "none", color: idx === filtered.length - 1 ? "var(--ink-tertiary)" : "var(--accent)", cursor: idx === filtered.length - 1 ? "default" : "pointer", fontSize: "12px", opacity: idx === filtered.length - 1 ? 0.5 : 1 }}>Down</button>
-                          <button onClick={() => { setEditingId(item.id); setEditValue(item.value); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
-                          <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}>Delete</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={filtered.map((c) => String(c.id))} strategy={verticalListSortingStrategy}>
+                    {filtered.map((item, idx) => (
+                      <SortableRow key={item.id} id={String(item.id)}>
+                        <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums", color: "var(--ink-tertiary)" }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingId === item.id ? (
+                            <input
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") updateItem(item.id); }}
+                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
+                              autoFocus
+                            />
+                          ) : (
+                            item.value
+                          )}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingId === item.id ? (
+                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                              <button onClick={() => updateItem(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
+                              <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                              <button onClick={() => { setEditingId(item.id); setEditValue(item.value); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
+                              <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}>Delete</button>
+                            </div>
+                          )}
+                        </td>
+                      </SortableRow>
+                    ))}
+                  </SortableContext>
+                </DndContext>
               )}
             </tbody>
           </table>
