@@ -106,6 +106,7 @@ export default function EntityFormModal({
               <ComboField
                 configCategory={field.configCategory}
                 source={field.source}
+                label={field.label}
                 value={(formData[field.key] as string) ?? ""}
                 onChange={(v) => updateField(field.key, v)}
                 required={field.requiredIf ? field.requiredIf(formData) : field.required}

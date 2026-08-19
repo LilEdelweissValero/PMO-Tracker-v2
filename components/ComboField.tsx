@@ -22,6 +22,7 @@ interface ComboFieldProps {
   strict?: boolean;
   sourceFilterKey?: string;
   relatedValue?: string;
+  label?: string;
 }
 
 export default function ComboField({
@@ -33,6 +34,7 @@ export default function ComboField({
   strict,
   sourceFilterKey,
   relatedValue,
+  label,
 }: ComboFieldProps) {
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
   const [open, setOpen] = useState(false);
@@ -107,6 +109,11 @@ export default function ComboField({
     ? options.filter((o) => o.value.toLowerCase().includes(value.trim().toLowerCase()))
     : options;
 
+  const showNew = !strict && value.trim() !== "" && !options.some((o) => o.value === value.trim());
+  const displayOptions = showNew
+    ? [{ value: value.trim(), label: `+ New ${label}: "${value.trim()}"` }, ...filtered]
+    : filtered;
+
   const commitValue = useCallback((v: string) => {
     const trimmed = v.trim();
     if (strict && trimmed && !options.some((o) => o.value === trimmed)) {
@@ -130,7 +137,7 @@ export default function ComboField({
     setTyping(false);
     setOpen(true);
     setHighlightIndex(
-      Math.max(0, options.findIndex((o) => o.value === value))
+      showNew ? 0 : Math.max(0, options.findIndex((o) => o.value === value))
     );
   };
 
@@ -151,16 +158,16 @@ export default function ComboField({
       e.preventDefault();
       setHighlightIndex((prev) => {
         const next = e.key === "ArrowDown" ? prev + 1 : prev - 1;
-        if (next < 0) return filtered.length - 1;
-        if (next >= filtered.length) return 0;
+        if (next < 0) return displayOptions.length - 1;
+        if (next >= displayOptions.length) return 0;
         return next;
       });
       return;
     }
     if (open && e.key === "Enter") {
       e.preventDefault();
-      if (highlightIndex >= 0 && filtered[highlightIndex]) {
-        commitValue(filtered[highlightIndex].value);
+      if (highlightIndex >= 0 && displayOptions[highlightIndex]) {
+        commitValue(displayOptions[highlightIndex].value);
       } else {
         commitValue(value);
       }
@@ -171,8 +178,8 @@ export default function ComboField({
       setOpen(false);
       return;
     }
-    if (open && e.key === "Tab" && highlightIndex >= 0 && filtered[highlightIndex]) {
-      commitValue(filtered[highlightIndex].value);
+    if (open && e.key === "Tab" && highlightIndex >= 0 && displayOptions[highlightIndex]) {
+      commitValue(displayOptions[highlightIndex].value);
     }
   };
 
@@ -198,7 +205,7 @@ export default function ComboField({
         aria-autocomplete="list"
         style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
       />
-      {open && filtered.length > 0 && (
+      {open && displayOptions.length > 0 && (
         <div
           role="listbox"
           style={{
@@ -217,27 +224,31 @@ export default function ComboField({
             padding: "4px",
           }}
         >
-          {filtered.map((opt, i) => (
-            <div
-              key={opt.value}
-              role="option"
-              aria-selected={i === highlightIndex}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => commitValue(opt.value)}
-              onMouseEnter={() => setHighlightIndex(i)}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "var(--radius-sm)",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-sans)",
-                color: "var(--ink-primary)",
-                backgroundColor: i === highlightIndex ? "var(--accent-bg)" : "transparent",
-              }}
-            >
-              {opt.label}
-            </div>
-          ))}
+          {displayOptions.map((opt, i) => {
+            const isNew = showNew && i === 0;
+            return (
+              <div
+                key={opt.value}
+                role="option"
+                aria-selected={i === highlightIndex}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => commitValue(opt.value)}
+                onMouseEnter={() => setHighlightIndex(i)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  color: isNew ? "var(--accent)" : "var(--ink-primary)",
+                  fontWeight: isNew ? 600 : 400,
+                  backgroundColor: i === highlightIndex ? "var(--accent-bg)" : "transparent",
+                }}
+              >
+                {opt.label}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

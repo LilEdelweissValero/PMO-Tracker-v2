@@ -366,6 +366,7 @@ export default function DirectoryPage() {
                 <ComboField
                   key={`sys-${entriesVersion}`}
                   source={{ url: "/api/directory-entry", valueKey: "system" }}
+                  label="System"
                   value={newSystem}
                   onChange={setNewSystem}
                 />
@@ -379,6 +380,7 @@ export default function DirectoryPage() {
                 <ComboField
                   key={`mod-${entriesVersion}`}
                   source={{ url: "/api/directory-entry", valueKey: "module" }}
+                  label="Module"
                   value={newModule}
                   onChange={setNewModule}
                 />
@@ -388,6 +390,7 @@ export default function DirectoryPage() {
                 <ComboField
                   key={`dev-new-${entriesVersion}`}
                   source={DEVELOPER_SOURCE}
+                  label="Developer"
                   value={newDeveloper}
                   onChange={setNewDeveloper}
                   strict
@@ -398,6 +401,7 @@ export default function DirectoryPage() {
                 <ComboField
                   key={`own-new-${entriesVersion}`}
                   source={OWNER_SOURCE}
+                  label="Owner Name"
                   value={newOwnerName}
                   onChange={setNewOwnerName}
                   strict
@@ -477,6 +481,7 @@ export default function DirectoryPage() {
                               <ComboField
                                 key={`dev-edit-${entry.id}`}
                                 source={DEVELOPER_SOURCE}
+                                label="Developer"
                                 value={editDeveloper}
                                 onChange={setEditDeveloper}
                                 strict
@@ -492,6 +497,7 @@ export default function DirectoryPage() {
                               <ComboField
                                 key={`own-edit-${entry.id}`}
                                 source={OWNER_SOURCE}
+                                label="Owner Name"
                                 value={editOwnerName}
                                 onChange={setEditOwnerName}
                                 strict
