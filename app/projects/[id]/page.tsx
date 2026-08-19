@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DetailHero from "@/components/DetailHero";
 import HealthBadge from "@/components/HealthBadge";
@@ -40,6 +40,7 @@ export default function ProjectDetailPage() {
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const autoBumpOpened = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +83,23 @@ export default function ProjectDetailPage() {
               } as Parameters<typeof buildWorkStreamWithDerived>[0])
             ),
           };
+          const openBump =
+            typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).get("openBump") === "1";
+          const firstWs = enriched.workStreams[0];
+          if (openBump && !autoBumpOpened.current && firstWs) {
+            autoBumpOpened.current = true;
+            const today = new Date().toISOString().split("T")[0];
+            setBumpState({
+              ws: firstWs,
+              bumpDate: today,
+              bumpMsg: "",
+              ballHolder: firstWs.currentBall,
+              progressChecked: false,
+              actualDate: today,
+            });
+            window.history.replaceState(null, "", `/projects/${projectId}`);
+          }
           setProject(enriched);
           setLoading(false);
         }
@@ -527,6 +545,40 @@ export default function ProjectDetailPage() {
       <Modal open={bumpState !== null} onClose={() => setBumpState(null)} title="Add Bump">
         {bumpState && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-tertiary)",
+                }}
+              >
+                Work Stream
+              </label>
+              <select
+                value={bumpState.ws.id}
+                onChange={(e) => {
+                  const ws = (project?.workStreams ?? []).find((w) => w.id === Number(e.target.value));
+                  if (ws) setBumpState({ ...bumpState, ws, ballHolder: ws.currentBall });
+                }}
+                style={{
+                  padding: "6px 10px",
+                  border: "1px solid var(--rule)",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  outline: "none",
+                  backgroundColor: "var(--surface)",
+                  color: "var(--ink-primary)",
+                }}
+              >
+                {(project?.workStreams ?? []).map((w) => (
+                  <option key={w.id} value={w.id}>{w.name || `Work Stream ${w.id}`}</option>
+                ))}
+              </select>
+            </div>
             <div style={{ display: "flex", gap: "var(--space-md)" }}>
               <DatePicker
                 label="Bump Date"

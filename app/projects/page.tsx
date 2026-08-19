@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import EntityFormModal from "@/components/EntityFormModal";
 import SortableTh from "@/components/SortableTh";
 import SaveOrderBar from "@/components/SaveOrderBar";
@@ -31,6 +32,7 @@ const projectAccessors: Record<string, SortAccessor<ProjectWithWorkStreams>> = {
 };
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -70,9 +72,10 @@ export default function ProjectsPage() {
       const body = await res.json().catch(() => null);
       throw new Error(body?.error ?? `Failed to create project (${res.status})`);
     }
-    fetchProjects();
+    const created = await res.json();
     playPing();
     showToast("Project created");
+    router.push(`/projects/${created.id}?openBump=1`);
   };
 
   if (loading) {
