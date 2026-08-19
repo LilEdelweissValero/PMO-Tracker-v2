@@ -9,7 +9,8 @@ import LinkEditor from "@/components/LinkEditor";
 import Modal from "@/components/Modal";
 import EntityFormModal from "@/components/EntityFormModal";
 import BumpModal from "@/components/BumpModal";
-import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
+import { computeProjectStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
+import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved, FormValue } from "@/lib/types";
@@ -33,6 +34,7 @@ export default function ProjectDetailPage() {
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const autoBumpOpened = useRef(false);
+  const templateStages = useFlowTemplate();
 
   useEffect(() => {
     let cancelled = false;
@@ -252,7 +254,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const status = computeAggregateStatus(project.workStreams);
+  const status = computeProjectStatus(project.workStreams, templateStages);
   const statusColors = getStatusColorClass(status);
   const refs: ReferenceLink[] = Array.isArray(project.references) ? project.references : [];
 

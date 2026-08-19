@@ -30,18 +30,56 @@ async function main() {
     "Project Closed",
   ];
 
+  const flowTemplateStatuses = [
+    "Not Yet Started",
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning",
+    "Planning",
+    "Partial Progress",
+    "Partial Progress",
+    "Partial Progress",
+    "Partial Progress",
+    "Partial Progress",
+    "Mostly Done",
+    "Mostly Done",
+    "Mostly Done",
+    "Complete",
+  ];
+
   for (let i = 0; i < flowTemplateStages.length; i++) {
     await prisma.configValue.upsert({
       where: { id: i + 1 },
-      update: {},
+      update: { status: flowTemplateStatuses[i] },
       create: {
         category: "flow_template",
         value: flowTemplateStages[i],
+        status: flowTemplateStatuses[i],
         sortOrder: i,
       },
     });
   }
   console.log(`Seeded ${flowTemplateStages.length} flow template stages`);
+
+  const projectStatuses = [
+    "Not Yet Started",
+    "Planning",
+    "Partial Progress",
+    "Mostly Done",
+    "Complete",
+  ];
+  for (let i = 0; i < projectStatuses.length; i++) {
+    const existing = await prisma.configValue.findFirst({
+      where: { category: "project_status", value: projectStatuses[i] },
+    });
+    if (!existing) {
+      await prisma.configValue.create({
+        data: { category: "project_status", value: projectStatuses[i], sortOrder: i },
+      });
+    }
+  }
+  console.log("Seeded project status values");
 
   const priorities = ["Critical", "High", "Medium", "Low"];
   for (let i = 0; i < priorities.length; i++) {

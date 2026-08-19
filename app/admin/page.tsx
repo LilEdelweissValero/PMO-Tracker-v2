@@ -27,6 +27,7 @@ interface ConfigItem {
   id: number;
   category: string;
   value: string;
+  status: string | null;
   sortOrder: number;
 }
 
@@ -51,7 +52,8 @@ export default function AdminPage() {
   const fetched = useRef(false);
 
   const categories = [
-    { key: "flow_template", label: "Default Flow Template" },
+    { key: "flow_template", label: "Default Stage Template" },
+    { key: "project_status", label: "Status" },
     { key: "priority", label: "Priority" },
     { key: "request_type", label: "Request Type" },
     { key: "initiated_by", label: "Initiated By" },
@@ -81,6 +83,23 @@ export default function AdminPage() {
 
   const filtered = configs
     .filter((c) => c.category === activeCategory)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const isStageTemplate = activeCategory === "flow_template";
+  const valueLabel = isStageTemplate ? "Stage" : "Value";
+  const addLabel = isStageTemplate
+    ? "Add New Stage"
+    : activeCategory === "project_status"
+      ? "Add New Status"
+      : "Add New Value";
+  const tableColumns: { key: string; label: string; sortable?: boolean }[] = [
+    ...adminColumns.slice(0, 2),
+    { key: "value", label: valueLabel },
+    ...(isStageTemplate ? [{ key: "status", label: "Project Status", sortable: false }] : []),
+    { key: "actions", label: "Actions", sortable: false },
+  ];
+  const statusOptions = configs
+    .filter((c) => c.category === "project_status")
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const refetch = () => {
@@ -127,6 +146,17 @@ export default function AdminPage() {
     refetch();
     playPing();
     showToast("Value updated");
+  };
+
+  const updateStatus = async (id: number, status: string) => {
+    await fetch(`/api/config-value/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: status || null }),
+    });
+    refetch();
+    playPing();
+    showToast("Status updated");
   };
 
   const deleteItem = async (id: number) => {
@@ -198,7 +228,7 @@ export default function AdminPage() {
       </div>
 
       <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
-        <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New Value</div>
+        <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>{addLabel}</div>
         <div style={{ display: "flex", gap: "var(--space-sm)" }}>
           <input
             type="text"
@@ -248,7 +278,7 @@ export default function AdminPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {adminColumns.map((col) => (
+                {tableColumns.map((col) => (
                   <SortableTh
                     key={col.key}
                     label={col.label}
@@ -266,7 +296,7 @@ export default function AdminPage() {
             <tbody>
               {sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                  <td colSpan={tableColumns.length} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                     No values configured
                   </td>
                 </tr>
@@ -290,6 +320,28 @@ export default function AdminPage() {
                             />
                           ) : (
                             item.value
+                          )}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {isStageTemplate && (
+                            <select
+                              value={item.status ?? ""}
+                              onChange={(e) => updateStatus(item.id, e.target.value)}
+                              style={{
+                                padding: "4px 8px",
+                                border: "1px solid var(--rule)",
+                                borderRadius: "var(--radius-md)",
+                                fontSize: "13px",
+                                fontFamily: "var(--font-sans)",
+                                outline: "none",
+                                backgroundColor: "var(--surface)",
+                              }}
+                            >
+                              <option value="">—</option>
+                              {statusOptions.map((s) => (
+                                <option key={s.id} value={s.value}>{s.value}</option>
+                              ))}
+                            </select>
                           )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>

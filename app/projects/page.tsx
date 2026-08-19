@@ -7,7 +7,8 @@ import EntityFormModal from "@/components/EntityFormModal";
 import SortableTh from "@/components/SortableTh";
 import SaveOrderBar from "@/components/SaveOrderBar";
 import { useColumnSort, type SortAccessor } from "@/lib/useColumnSort";
-import { computeAggregateStatus, getStatusColorClass } from "@/lib/feature";
+import { computeProjectStatus, getStatusColorClass } from "@/lib/feature";
+import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams, FormValue } from "@/lib/types";
@@ -20,22 +21,12 @@ const getSystemLabel = (project: ProjectWithWorkStreams): string => {
   return project.systemName || "—";
 };
 
-const projectAccessors: Record<string, SortAccessor<ProjectWithWorkStreams>> = {
-  id: (p) => p.projectId,
-  name: (p) => p.name,
-  systemName: (p) => getSystemLabel(p),
-  status: (p) => computeAggregateStatus(p.workStreams),
-  priority: (p) => p.priority,
-  pmOfficer: (p) => p.pmOfficer,
-  requestType: (p) => p.requestType,
-  initiatedBy: (p) => p.initiatedBy,
-};
-
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const templateStages = useFlowTemplate();
 
   const fetchProjects = () => {
     fetch("/api/project")
@@ -48,6 +39,17 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => { fetchProjects(); }, []);
+
+  const projectAccessors: Record<string, SortAccessor<ProjectWithWorkStreams>> = {
+    id: (p) => p.projectId,
+    name: (p) => p.name,
+    systemName: (p) => getSystemLabel(p),
+    status: (p) => computeProjectStatus(p.workStreams, templateStages),
+    priority: (p) => p.priority,
+    pmOfficer: (p) => p.pmOfficer,
+    requestType: (p) => p.requestType,
+    initiatedBy: (p) => p.initiatedBy,
+  };
 
   const {
     sort,
@@ -145,7 +147,7 @@ export default function ProjectsPage() {
           </thead>
           <tbody>
             {sortedRows.map((project) => {
-              const status = computeAggregateStatus(project.workStreams);
+              const status = computeProjectStatus(project.workStreams, templateStages);
               const colors = getStatusColorClass(status);
               return (
                 <tr

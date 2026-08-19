@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import DatePicker from "@/components/DatePicker";
-import { computeAggregateStatus, getStatusColorClass } from "@/lib/feature";
+import { computeProjectStatus, getStatusColorClass } from "@/lib/feature";
+import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import type { ProjectWithWorkStreams } from "@/lib/types";
 
 export default function ReportsPage() {
@@ -11,6 +12,7 @@ export default function ReportsPage() {
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
+  const templateStages = useFlowTemplate();
 
   const fetchReport = async () => {
     if (!date) return;
@@ -87,7 +89,7 @@ export default function ReportsPage() {
                 </tr>
               ) : (
                 projects.map((project) => {
-                  const status = computeAggregateStatus(project.workStreams);
+                  const status = computeProjectStatus(project.workStreams, templateStages);
                   const colors = getStatusColorClass(status);
                   return (
                     <tr key={project.id} style={{ borderBottom: "1px solid var(--rule)" }}>

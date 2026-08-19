@@ -44,25 +44,39 @@ export function getHealthLabel(health: string): string {
   return labels[health] ?? health;
 }
 
-export function computeAggregateStatus(
-  workStreams: WorkStreamWithStages[]
+export interface TemplateStage {
+  name: string;
+  status: string | null;
+}
+
+export function computeProjectStatus(
+  workStreams: WorkStreamWithStages[],
+  templateStages: TemplateStage[]
 ): string {
-  if (workStreams.length === 0) return "Not Yet Started";
-  const totalStages = workStreams.reduce(
-    (sum, ws) => sum + ws.flowStages.length,
-    0
-  );
-  const completedStages = workStreams.reduce(
-    (sum, ws) => sum + ws.flowStages.filter((s) => s.actualDate !== null).length,
-    0
-  );
-  if (totalStages === 0) return "Not Yet Started";
-  const pct = completedStages / totalStages;
-  if (pct === 0) return "Not Yet Started";
-  if (pct <= 0.3) return "Planning";
-  if (pct <= 0.7) return "Partial Progress";
-  if (pct < 1) return "Mostly Done";
-  return "Complete";
+  if (templateStages.length === 0) return "Not Yet Started";
+  if (workStreams.length === 0) return templateStages[0].status || "Not Yet Started";
+
+  const templateIndexByName = new Map(templateStages.map((t, i) => [t.name, i]));
+
+  let bottleneckIdx: number | null = null;
+
+  for (const ws of workStreams) {
+    let lastCompletedIdx = -1;
+    for (const stage of ws.flowStages) {
+      if (!stage.actualDate) continue;
+      const idx = templateIndexByName.get(stage.name);
+      if (idx !== undefined && idx > lastCompletedIdx) lastCompletedIdx = idx;
+    }
+    const nextIdx = lastCompletedIdx + 1;
+    if (nextIdx >= templateStages.length) continue;
+    if (bottleneckIdx === null || nextIdx < bottleneckIdx) bottleneckIdx = nextIdx;
+  }
+
+  if (bottleneckIdx === null) {
+    return templateStages[templateStages.length - 1].status || "Complete";
+  }
+
+  return templateStages[bottleneckIdx].status || "Not Yet Started";
 }
 
 export function getStatusColorClass(status: string): { bg: string; ink: string } {

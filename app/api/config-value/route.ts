@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     data: {
       category: body.category,
       value: body.value,
+      status: body.status !== undefined ? body.status : null,
       sortOrder: body.sortOrder ?? 0,
     },
   });
