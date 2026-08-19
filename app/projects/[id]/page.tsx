@@ -83,18 +83,20 @@ export default function ProjectDetailPage() {
               } as Parameters<typeof buildWorkStreamWithDerived>[0])
             ),
           };
-          const openBump =
-            typeof window !== "undefined" &&
-            new URLSearchParams(window.location.search).get("openBump") === "1";
-          const firstWs = enriched.workStreams[0];
-          if (openBump && !autoBumpOpened.current && firstWs) {
+          const searchParams =
+            typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+          const openBump = searchParams !== null && searchParams.get("openBump") === "1";
+          const wsParam = Number(searchParams?.get("ws"));
+          const targetWs =
+            enriched.workStreams.find((w: { id: number }) => w.id === wsParam) ?? enriched.workStreams[0];
+          if (openBump && !autoBumpOpened.current && targetWs) {
             autoBumpOpened.current = true;
             const today = new Date().toISOString().split("T")[0];
             setBumpState({
-              ws: firstWs,
+              ws: targetWs,
               bumpDate: today,
               bumpMsg: "",
-              ballHolder: firstWs.currentBall,
+              ballHolder: targetWs.currentBall,
               progressChecked: false,
               actualDate: today,
             });

@@ -2,8 +2,10 @@
 
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SortableTh from "@/components/SortableTh";
 import { useTableSort, type SortAccessor } from "@/lib/useTableSort";
+import { playPrompt } from "@/lib/sound";
 import type { LatestEntry, DashboardData } from "@/lib/types";
 
 interface DashboardColumn {
@@ -73,12 +75,15 @@ function DashboardTable({
   title,
   entries,
   columns,
+  action,
 }: {
   title: string;
   entries: LatestEntry[];
   columns: DashboardColumn[];
+  action?: { label: string; onClick: (entry: LatestEntry) => void };
 }) {
   const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   return (
     <div style={{ flex: 1, minWidth: "400px" }}>
@@ -123,14 +128,47 @@ function DashboardTable({
                 <tr
                   key={entry.id}
                   style={{ borderBottom: "1px solid var(--rule)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; setHoveredId(entry.id); }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; setHoveredId(null); }}
                 >
-                  {columns.map((col) => (
-                    <td key={col.key} style={{ padding: "8px 10px", ...cellStyles[col.key] }}>
-                      {cellRenderers[col.key]?.({ entry })}
-                    </td>
-                  ))}
+                  {columns.map((col, i) => {
+                    const isLast = i === columns.length - 1;
+                    const showAction = isLast && action && hoveredId === entry.id && entry.projectId && entry.workStreamId;
+                    return (
+                      <td key={col.key} style={{ padding: "8px 10px", ...cellStyles[col.key] }}>
+                        {isLast ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            {cellRenderers[col.key]?.({ entry })}
+                            {showAction && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playPrompt();
+                                  action!.onClick(entry);
+                                }}
+                                style={{
+                                  padding: "2px 7px",
+                                  border: "none",
+                                  borderRadius: "var(--radius-sm)",
+                                  backgroundColor: "var(--accent)",
+                                  color: "#FFFFFF",
+                                  cursor: "pointer",
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  fontFamily: "var(--font-sans)",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {action!.label}
+                              </button>
+                            )}
+                          </span>
+                        ) : (
+                          cellRenderers[col.key]?.({ entry })
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}
@@ -142,6 +180,7 @@ function DashboardTable({
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -170,7 +209,19 @@ export default function DashboardPage() {
       </h1>
       <div style={{ display: "flex", gap: "var(--space-lg)", flexWrap: "wrap" }}>
         <DashboardTable title="Latest Progress" entries={data?.latestProgress ?? []} columns={progressColumns} />
-        <DashboardTable title="Latest Bumps" entries={data?.latestBumps ?? []} columns={bumpColumns} />
+        <DashboardTable
+          title="Latest Bumps"
+          entries={data?.latestBumps ?? []}
+          columns={bumpColumns}
+          action={{
+            label: "+ Bump",
+            onClick: (entry) => {
+              if (entry.projectId && entry.workStreamId) {
+                router.push(`/projects/${entry.projectId}?openBump=1&ws=${entry.workStreamId}`);
+              }
+            },
+          }}
+        />
       </div>
     </div>
   );
