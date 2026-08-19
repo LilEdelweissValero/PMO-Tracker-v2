@@ -8,21 +8,13 @@ import DatePicker from "@/components/DatePicker";
 import LinkEditor from "@/components/LinkEditor";
 import Modal from "@/components/Modal";
 import EntityFormModal from "@/components/EntityFormModal";
+import BumpModal from "@/components/BumpModal";
 import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved, FormValue } from "@/lib/types";
 
 const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
-
-interface BumpState {
-  ws: WorkStreamWithStages;
-  bumpDate: string;
-  bumpMsg: string;
-  ballHolder: string;
-  progressChecked: boolean;
-  actualDate: string;
-}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -35,7 +27,7 @@ export default function ProjectDetailPage() {
   const [showManageSystems, setShowManageSystems] = useState(false);
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [units, setUnits] = useState<UnitInvolved[]>([]);
-  const [bumpState, setBumpState] = useState<BumpState | null>(null);
+  const [bumpWsId, setBumpWsId] = useState<number | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
@@ -91,15 +83,7 @@ export default function ProjectDetailPage() {
             enriched.workStreams.find((w: { id: number }) => w.id === wsParam) ?? enriched.workStreams[0];
           if (openBump && !autoBumpOpened.current && targetWs) {
             autoBumpOpened.current = true;
-            const today = new Date().toISOString().split("T")[0];
-            setBumpState({
-              ws: targetWs,
-              bumpDate: today,
-              bumpMsg: "",
-              ballHolder: targetWs.currentBall,
-              progressChecked: false,
-              actualDate: today,
-            });
+            setBumpWsId(targetWs.id);
             window.history.replaceState(null, "", `/projects/${projectId}`);
           }
           setProject(enriched);
@@ -215,62 +199,6 @@ export default function ProjectDetailPage() {
       }),
     ]);
     refetch();
-  };
-
-  const openBumpModal = (ws: WorkStreamWithStages) => {
-    const today = new Date().toISOString().split("T")[0];
-    setBumpState({
-      ws,
-      bumpDate: today,
-      bumpMsg: "",
-      ballHolder: ws.currentBall,
-      progressChecked: false,
-      actualDate: today,
-    });
-  };
-
-  const logBump = async () => {
-    if (!bumpState) return;
-    const { ws, bumpDate, bumpMsg, ballHolder, progressChecked, actualDate } = bumpState;
-    const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
-    const nextStage = sorted.find((s) => !s.actualDate) ?? null;
-    const progressedStage = progressChecked && nextStage ? nextStage : null;
-    const stageName = progressedStage?.name ?? ws.currentStage?.name ?? "Not Started";
-
-    await fetch("/api/change-log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workStreamId: ws.id,
-        projectId,
-        entryType: "bump",
-        fieldName: stageName,
-        newValue: ballHolder,
-        note: bumpMsg,
-        bumpDate,
-      }),
-    });
-
-    if (progressedStage && actualDate) {
-      await fetch(`/api/flow-stage/${progressedStage.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actualDate, note: bumpMsg }),
-      });
-    }
-
-    if (ballHolder !== ws.currentBall) {
-      await fetch(`/api/work-stream/${ws.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentBall: ballHolder }),
-      });
-    }
-
-    setBumpState(null);
-    refetch();
-    playPing();
-    showToast("Bump logged");
   };
 
   const openBumpsModal = (ws: WorkStreamWithStages) => {
@@ -467,7 +395,7 @@ export default function ProjectDetailPage() {
             onReorderStage={(stageId, direction) => reorderStage(ws.id, stageId, direction)}
             onDeleteStage={deleteStage}
             onAddStage={() => { playPrompt(); setAddStageWsId(ws.id); }}
-            onBump={() => { playPrompt(); openBumpModal(ws); }}
+            onBump={() => { playPrompt(); setBumpWsId(ws.id); }}
             onOpenBumps={() => openBumpsModal(ws)}
           />
         ))}
@@ -544,163 +472,13 @@ export default function ProjectDetailPage() {
         )}
       </Modal>
 
-      <Modal open={bumpState !== null} onClose={() => setBumpState(null)} title="Add Bump">
-        {bumpState && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                }}
-              >
-                Work Stream
-              </label>
-              <select
-                value={bumpState.ws.id}
-                onChange={(e) => {
-                  const ws = (project?.workStreams ?? []).find((w) => w.id === Number(e.target.value));
-                  if (ws) setBumpState({ ...bumpState, ws, ballHolder: ws.currentBall });
-                }}
-                style={{
-                  padding: "6px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  outline: "none",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--ink-primary)",
-                }}
-              >
-                {(project?.workStreams ?? []).map((w) => (
-                  <option key={w.id} value={w.id}>{w.name || `Work Stream ${w.id}`}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: "var(--space-md)" }}>
-              <DatePicker
-                label="Bump Date"
-                value={bumpState.bumpDate}
-                onChange={(d) => setBumpState({ ...bumpState, bumpDate: d })}
-              />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                }}
-              >
-                Bump Msg
-              </label>
-              <textarea
-                value={bumpState.bumpMsg}
-                onChange={(e) => setBumpState({ ...bumpState, bumpMsg: e.target.value })}
-                rows={3}
-                placeholder="Enter bump message..."
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  resize: "vertical",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                }}
-              >
-                Ball Holder
-              </label>
-              <select
-                value={bumpState.ballHolder}
-                onChange={(e) => setBumpState({ ...bumpState, ballHolder: e.target.value })}
-                style={{
-                  padding: "6px 10px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  outline: "none",
-                  backgroundColor: "var(--surface)",
-                  color: "var(--ink-primary)",
-                }}
-              >
-                {ballGroups.map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", fontSize: "13px", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={bumpState.progressChecked}
-                onChange={(e) => setBumpState({ ...bumpState, progressChecked: e.target.checked })}
-                style={{ cursor: "pointer" }}
-              />
-              Progress to next stage
-            </label>
-            {bumpState.progressChecked && (
-              <DatePicker
-                label="Actual Date"
-                value={bumpState.actualDate}
-                onChange={(d) => setBumpState({ ...bumpState, actualDate: d })}
-              />
-            )}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)" }}>
-              <button
-                onClick={() => setBumpState(null)}
-                style={{
-                  padding: "7px 12px",
-                  border: "1px solid var(--rule)",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--surface)",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={logBump}
-                disabled={!bumpState.bumpMsg.trim()}
-                style={{
-                  padding: "7px 12px",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--accent)",
-                  color: "#FFFFFF",
-                  cursor: bumpState.bumpMsg.trim() ? "pointer" : "not-allowed",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  opacity: bumpState.bumpMsg.trim() ? 1 : 0.5,
-                }}
-              >
-                Save Bump
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <BumpModal
+        open={bumpWsId !== null}
+        projectId={projectId}
+        workStreamId={bumpWsId ?? 0}
+        onClose={() => setBumpWsId(null)}
+        onSaved={refetch}
+      />
 
       <Modal open={bumpsWs !== null} onClose={() => setBumpsWs(null)} title={`Bumps — ${bumpsWs?.name ?? ""}`} wide>
         <div style={{ overflowX: "auto" }}>

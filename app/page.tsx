@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import SortableTh from "@/components/SortableTh";
+import BumpModal from "@/components/BumpModal";
 import { useTableSort, type SortAccessor } from "@/lib/useTableSort";
 import { playPrompt } from "@/lib/sound";
 import type { LatestEntry, DashboardData } from "@/lib/types";
@@ -135,36 +135,35 @@ function DashboardTable({
                     const isLast = i === columns.length - 1;
                     const showAction = isLast && action && hoveredId === entry.id && entry.projectId && entry.workStreamId;
                     return (
-                      <td key={col.key} style={{ padding: "8px 10px", ...cellStyles[col.key] }}>
-                        {isLast ? (
-                          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            {cellRenderers[col.key]?.({ entry })}
-                            {showAction && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playPrompt();
-                                  action!.onClick(entry);
-                                }}
-                                style={{
-                                  padding: "2px 7px",
-                                  border: "none",
-                                  borderRadius: "var(--radius-sm)",
-                                  backgroundColor: "var(--accent)",
-                                  color: "#FFFFFF",
-                                  cursor: "pointer",
-                                  fontSize: "11px",
-                                  fontWeight: 600,
-                                  fontFamily: "var(--font-sans)",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {action!.label}
-                              </button>
-                            )}
-                          </span>
-                        ) : (
-                          cellRenderers[col.key]?.({ entry })
+                      <td key={col.key} style={{ padding: "8px 10px", position: isLast ? "relative" : undefined, ...cellStyles[col.key] }}>
+                        {cellRenderers[col.key]?.({ entry })}
+                        {showAction && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playPrompt();
+                              action!.onClick(entry);
+                            }}
+                            style={{
+                              position: "absolute",
+                              right: "8px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              padding: "3px 10px",
+                              border: "1px solid var(--rule-strong)",
+                              borderRadius: "var(--radius-sm)",
+                              backgroundColor: "transparent",
+                              color: "var(--ink-secondary)",
+                              cursor: "pointer",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              letterSpacing: "0.06em",
+                              fontFamily: "var(--font-sans)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {action!.label}
+                          </button>
                         )}
                       </td>
                     );
@@ -180,11 +179,11 @@ function DashboardTable({
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bumpTarget, setBumpTarget] = useState<{ projectId: number; workStreamId: number } | null>(null);
 
-  useEffect(() => {
+  const loadDashboard = () => {
     fetch("/api/dashboard")
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to load dashboard (${r.status})`);
@@ -192,7 +191,9 @@ export default function DashboardPage() {
       })
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadDashboard(); }, []);
 
   if (loading) {
     return (
@@ -214,15 +215,23 @@ export default function DashboardPage() {
           entries={data?.latestBumps ?? []}
           columns={bumpColumns}
           action={{
-            label: "+ Bump",
+            label: "BUMP",
             onClick: (entry) => {
               if (entry.projectId && entry.workStreamId) {
-                router.push(`/projects/${entry.projectId}?openBump=1&ws=${entry.workStreamId}`);
+                setBumpTarget({ projectId: entry.projectId, workStreamId: entry.workStreamId });
               }
             },
           }}
         />
       </div>
+
+      <BumpModal
+        open={bumpTarget !== null}
+        projectId={bumpTarget?.projectId ?? 0}
+        workStreamId={bumpTarget?.workStreamId ?? 0}
+        onClose={() => setBumpTarget(null)}
+        onSaved={loadDashboard}
+      />
     </div>
   );
 }
