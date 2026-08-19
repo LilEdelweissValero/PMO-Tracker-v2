@@ -9,9 +9,10 @@ export type SortAccessor<T> = (row: T) => string | number | null;
 
 export function useTableSort<T extends { id: number }>(
   rows: T[],
-  accessors: Record<string, SortAccessor<T>>
+  accessors: Record<string, SortAccessor<T>>,
+  initialSort: SortState | null = null
 ) {
-  const [sort, setSort] = useState<SortState | null>(null);
+  const [sort, setSort] = useState<SortState | null>(initialSort);
 
   const sortedRows = useMemo(() => {
     if (!sort) return rows;

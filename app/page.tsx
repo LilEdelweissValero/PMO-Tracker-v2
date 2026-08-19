@@ -82,7 +82,10 @@ function DashboardTable({
   columns: DashboardColumn[];
   action?: { label: string; onClick: (entry: LatestEntry) => void };
 }) {
-  const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors);
+  const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors, {
+    key: "duration",
+    direction: "desc",
+  });
   const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   return (
