@@ -1,6 +1,6 @@
 "use client";
 
-import type { SortState } from "@/lib/useColumnSort";
+import type { SortState } from "@/lib/useTableSort";
 
 interface SortableThProps {
   label: string;

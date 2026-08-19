@@ -2,31 +2,35 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SortableTh from "@/components/SortableTh";
+import { useTableSort, type SortAccessor } from "@/lib/useTableSort";
 import type { LatestEntry, DashboardData } from "@/lib/types";
 
-export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+const dashboardColumns = [
+  { key: "project", label: "Project" },
+  { key: "workStream", label: "Work Stream" },
+  { key: "currentStage", label: "Current Stage" },
+  { key: "date", label: "Date" },
+  { key: "note", label: "Note" },
+];
 
-  useEffect(() => {
-    fetch("/api/dashboard")
-      .then((r) => {
-        if (!r.ok) throw new Error(`Failed to load dashboard (${r.status})`);
-        return r.json();
-      })
-      .then((d) => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+const dateValue = (entry: LatestEntry): number => {
+  const t = new Date(entry.bumpDate ?? entry.changedAt).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
 
-  if (loading) {
-    return (
-      <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
-        <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading dashboard...</div>
-      </div>
-    );
-  }
+const dashboardAccessors: Record<string, SortAccessor<LatestEntry>> = {
+  project: (e) => e.projectName,
+  workStream: (e) => e.workStreamName,
+  currentStage: (e) => e.currentStage,
+  date: (e) => dateValue(e),
+  note: (e) => e.note,
+};
 
-  const renderTable = (title: string, entries: LatestEntry[]) => (
+function DashboardTable({ title, entries }: { title: string; entries: LatestEntry[] }) {
+  const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors);
+
+  return (
     <div style={{ flex: 1, minWidth: "400px" }}>
       <h2
         style={{
@@ -42,35 +46,30 @@ export default function DashboardPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <thead>
             <tr>
-              {["Project", "Work Stream", "Current Stage", "Date", "Note"].map((h) => (
-                <th
-                  key={h}
+              {dashboardColumns.map((col) => (
+                <SortableTh
+                  key={col.key}
+                  label={col.label}
+                  sort={sort}
+                  sortKey={col.key}
+                  onSort={toggleSort}
                   style={{
-                    padding: "8px 10px",
-                    textAlign: "left",
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase",
                     backgroundColor: "var(--ground-metric)",
                     borderBottom: "1px solid var(--rule-strong)",
-                    fontFamily: "var(--font-sans)",
                   }}
-                >
-                  {h}
-                </th>
+                />
               ))}
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 ? (
+            {sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                   No entries
                 </td>
               </tr>
             ) : (
-              entries.map((entry) => (
+              sortedRows.map((entry) => (
                 <tr
                   key={entry.id}
                   style={{ borderBottom: "1px solid var(--rule)" }}
@@ -103,6 +102,29 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load dashboard (${r.status})`);
+        return r.json();
+      })
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
+        <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
@@ -110,8 +132,8 @@ export default function DashboardPage() {
         Dashboard
       </h1>
       <div style={{ display: "flex", gap: "var(--space-lg)", flexWrap: "wrap" }}>
-        {renderTable("Latest Progress", data?.latestProgress ?? [])}
-        {renderTable("Latest Bumps", data?.latestBumps ?? [])}
+        <DashboardTable title="Latest Progress" entries={data?.latestProgress ?? []} />
+        <DashboardTable title="Latest Bumps" entries={data?.latestBumps ?? []} />
       </div>
     </div>
   );
