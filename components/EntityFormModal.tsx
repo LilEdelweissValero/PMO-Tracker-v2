@@ -2,17 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";import Modal from "./Modal";
 import ComboField, { inputStyle } from "./ComboField";
+import SystemModulesField from "./SystemModulesField";
+import type { FormValue, SystemSelection } from "@/lib/types";
 
 interface Field {
   key: string;
   label: string;
-  type?: "text" | "textarea" | "select" | "number" | "combo" | "multisource";
+  type?: "text" | "textarea" | "select" | "number" | "combo" | "multisource" | "systemModules";
   options?: { label: string; value: string }[];
   configCategory?: string;
   source?: { url: string; valueKey: string; labelKey?: string; moduleKey?: string };
   required?: boolean;
-  requiredIf?: (data: Record<string, string | number | number[]>) => boolean;
-  hiddenIf?: (data: Record<string, string | number | number[]>) => boolean;
+  requiredIf?: (data: Record<string, FormValue>) => boolean;
+  hiddenIf?: (data: Record<string, FormValue>) => boolean;
   strict?: boolean;
   filterBy?: string;
   sourceFilterKey?: string;
@@ -23,8 +25,8 @@ interface EntityFormModalProps {
   onClose: () => void;
   title: string;
   fields: Field[];
-  initialData?: Record<string, string | number | number[]>;
-  onSubmit: (data: Record<string, string | number | number[]>) => Promise<void> | void;
+  initialData?: Record<string, FormValue>;
+  onSubmit: (data: Record<string, FormValue>) => Promise<void> | void;
   wide?: boolean;
 }
 
@@ -37,7 +39,7 @@ export default function EntityFormModal({
   onSubmit,
   wide,
 }: EntityFormModalProps) {
-  const [formData, setFormData] = useState<Record<string, string | number | number[]>>(
+  const [formData, setFormData] = useState<Record<string, FormValue>>(
     initialData ?? {}
   );
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function EntityFormModal({
     setError(null);
     setSubmitting(true);
     try {
-      const payload: Record<string, string | number | number[]> = {};
+      const payload: Record<string, FormValue> = {};
       for (const field of fields) {
         if (field.hiddenIf?.(formData)) continue;
         if (field.key in formData) payload[field.key] = formData[field.key];
@@ -71,7 +73,7 @@ export default function EntityFormModal({
     }
   };
 
-  const updateField = (key: string, value: string | number | number[]) => {
+  const updateField = (key: string, value: FormValue) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -113,6 +115,11 @@ export default function EntityFormModal({
                 strict={field.strict}
                 relatedValue={field.filterBy ? (formData[field.filterBy] as string) ?? "" : undefined}
                 sourceFilterKey={field.sourceFilterKey}
+              />
+            ) : field.type === "systemModules" ? (
+              <SystemModulesField
+                value={(formData[field.key] as SystemSelection[] | undefined) ?? []}
+                onChange={(v) => updateField(field.key, v)}
               />
             ) : field.type === "multisource" && field.source ? (
               <MultiSourceField

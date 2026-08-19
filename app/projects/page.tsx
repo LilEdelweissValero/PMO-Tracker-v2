@@ -9,7 +9,7 @@ import { useColumnSort, type SortAccessor } from "@/lib/useColumnSort";
 import { computeAggregateStatus, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams } from "@/lib/types";
+import type { ProjectWithWorkStreams, FormValue } from "@/lib/types";
 
 const getSystemLabel = (project: ProjectWithWorkStreams): string => {
   const systems = project.systems ?? [];
@@ -60,7 +60,7 @@ export default function ProjectsPage() {
     showToast("Order saved");
   });
 
-  const handleCreate = async (data: Record<string, string | number | number[]>) => {
+  const handleCreate = async (data: Record<string, FormValue>) => {
     const res = await fetch("/api/project", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -206,7 +206,7 @@ export default function ProjectsPage() {
           { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
-          { key: "systemEntryIds", label: "Systems Affected", type: "multisource", source: { url: "/api/directory-entry", valueKey: "id", labelKey: "system", moduleKey: "module" }, hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
+          { key: "systems", label: "Systems Affected", type: "systemModules", hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
         ]}
         onSubmit={handleCreate}

@@ -11,7 +11,7 @@ import EntityFormModal from "@/components/EntityFormModal";
 import { computeAggregateStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved } from "@/lib/types";
+import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved, FormValue } from "@/lib/types";
 
 const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
 
@@ -149,7 +149,7 @@ export default function ProjectDetailPage() {
     playPing();
   };
 
-  const addStage = async (data: Record<string, string | number | number[]>) => {
+  const addStage = async (data: Record<string, FormValue>) => {
     if (addStageWsId === null) return;
     const res = await fetch("/api/flow-stage", {
       method: "POST",
@@ -262,7 +262,7 @@ export default function ProjectDetailPage() {
       .catch(() => setBumpsList([]));
   };
 
-  const addWorkStream = async (data: Record<string, string | number | number[]>) => {
+  const addWorkStream = async (data: Record<string, FormValue>) => {
     const res = await fetch("/api/work-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -519,7 +519,7 @@ export default function ProjectDetailPage() {
                 [FIELD_TYPE_MAP[editingField].filterBy]: String((project as unknown as Record<string, unknown>)[FIELD_TYPE_MAP[editingField].filterBy] ?? ""),
               } : {}),
             }}
-            onSubmit={(data) => { updateProject(data); setEditingField(null); }}
+            onSubmit={(data) => { updateProject(data as Record<string, string | number | ReferenceLink[] | number[]>); setEditingField(null); }}
           />
         )}
       </Modal>

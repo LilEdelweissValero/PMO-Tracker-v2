@@ -3,6 +3,13 @@ export interface ReferenceLink {
   url: string;
 }
 
+export interface SystemSelection {
+  system: string;
+  moduleEntryIds: number[];
+}
+
+export type FormValue = string | number | number[] | SystemSelection[];
+
 export interface ProjectCreate {
   projectId: string;
   name: string;
