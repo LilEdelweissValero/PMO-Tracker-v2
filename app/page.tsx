@@ -135,35 +135,34 @@ function DashboardTable({
                     const isLast = i === columns.length - 1;
                     const showAction = isLast && action && hoveredId === entry.id && entry.projectId && entry.workStreamId;
                     return (
-                      <td key={col.key} style={{ padding: "8px 10px", position: isLast ? "relative" : undefined, ...cellStyles[col.key] }}>
-                        {cellRenderers[col.key]?.({ entry })}
-                        {showAction && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playPrompt();
-                              action!.onClick(entry);
-                            }}
-                            style={{
-                              position: "absolute",
-                              right: "8px",
-                              top: "50%",
-                              transform: "translateY(-50%)",
-                              padding: "3px 10px",
-                              border: "1px solid var(--rule-strong)",
-                              borderRadius: "var(--radius-sm)",
-                              backgroundColor: "transparent",
-                              color: "var(--ink-secondary)",
-                              cursor: "pointer",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              letterSpacing: "0.06em",
-                              fontFamily: "var(--font-sans)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {action!.label}
-                          </button>
+                      <td key={col.key} style={{ padding: "8px 10px", ...cellStyles[col.key] }}>
+                        {isLast && showAction ? (
+                          <span style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playPrompt();
+                                action!.onClick(entry);
+                              }}
+                              style={{
+                                padding: "3px 10px",
+                                border: "1px solid var(--rule-strong)",
+                                borderRadius: "var(--radius-sm)",
+                                backgroundColor: "transparent",
+                                color: "var(--ink-secondary)",
+                                cursor: "pointer",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                letterSpacing: "0.06em",
+                                fontFamily: "var(--font-sans)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {action!.label}
+                            </button>
+                          </span>
+                        ) : (
+                          cellRenderers[col.key]?.({ entry })
                         )}
                       </td>
                     );
