@@ -295,7 +295,7 @@ export default function ProjectDetailPage() {
         <Section title="Project Owner">
           <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
           <FieldRow label="Project Owner" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
-          <FieldRow label="Project Owner Dept" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
+          <FieldRow label="Business Unit" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
         </Section>
       </div>
 
@@ -625,11 +625,11 @@ const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string; so
   name: { type: "text" },
   priority: { type: "combo", configCategory: "priority" },
   scopeDescription: { type: "textarea" },
-  initiatedBy: { type: "combo", configCategory: "initiated_by" },
+  initiatedBy: { type: "combo", configCategory: "initiated_by", strict: true },
   requestedByName: { type: "combo", configCategory: "requested_by_name" },
   requestedByDept: { type: "combo", configCategory: "requested_by_dept" },
   requestType: { type: "combo", configCategory: "request_type" },
-  pmOfficer: { type: "combo", configCategory: "pm_officer" },
+  pmOfficer: { type: "combo", configCategory: "pm_officer", strict: true },
   systemName: { type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, strict: true },
   specificModule: { type: "combo", source: { url: "/api/directory-entry", valueKey: "module" }, strict: true, filterBy: "systemName" },
   systemOwnerName: { type: "text" },
@@ -643,7 +643,7 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   scopeDescription: "Scope Description",
   initiatedBy: "Initiated By",
   requestedByName: "Project Owner",
-  requestedByDept: "Project Owner Dept",
+  requestedByDept: "Business Unit",
   requestType: "Request Type",
   pmOfficer: "PM Officer",
   systemName: "System Name",

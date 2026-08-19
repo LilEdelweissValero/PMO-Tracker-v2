@@ -46,6 +46,7 @@ export default function ProjectsPage() {
     systemName: (p) => getSystemLabel(p),
     status: (p) => computeProjectStatus(p.workStreams, templateStages),
     priority: (p) => p.priority,
+    requestedByName: (p) => p.requestedByName,
     pmOfficer: (p) => p.pmOfficer,
     requestType: (p) => p.requestType,
     initiatedBy: (p) => p.initiatedBy,
@@ -94,6 +95,7 @@ export default function ProjectsPage() {
     { key: "systemName", label: "System", width: "220px", zone: "metric" as const },
     { key: "status", label: "Status", width: "150px", zone: "metric" as const },
     { key: "priority", label: "Priority", width: "80px", zone: "metric" as const },
+    { key: "requestedByName", label: "Project Owner", zone: "metric" as const },
     { key: "pmOfficer", label: "PM Officer", zone: "metric" as const },
     { key: "requestType", label: "Request Type", zone: "metric" as const },
     { key: "initiatedBy", label: "Initiated By", zone: "metric" as const },
@@ -187,6 +189,7 @@ export default function ProjectsPage() {
                     </span>
                   </td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.priority || "—"}</td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestedByName || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.pmOfficer || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestType || "—"}</td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.initiatedBy || "—"}</td>
@@ -207,12 +210,14 @@ export default function ProjectsPage() {
           { key: "name", label: "Project Name", required: true },
           { key: "priority", label: "Priority", type: "combo", configCategory: "priority", required: true },
           { key: "scopeDescription", label: "Scope Description", type: "textarea", required: true },
-          { key: "initiatedBy", label: "Initiated By", type: "combo", configCategory: "initiated_by", required: true },
+          { key: "initiatedBy", label: "Initiated By", type: "combo", configCategory: "initiated_by", required: true, strict: true },
           { key: "requestedByName", label: "Requested By Name", type: "combo", configCategory: "requested_by_name", required: true },
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true },
           { key: "systems", label: "Systems Affected", type: "systemModules", hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
-          { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true },
+          { key: "systemOwnerName", label: "System Owner Name", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
+          { key: "systemOwnerDept", label: "System Owner Dept", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
+          { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true, strict: true },
         ]}
         onSubmit={handleCreate}
       />
