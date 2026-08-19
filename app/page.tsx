@@ -1,33 +1,83 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import Link from "next/link";
 import SortableTh from "@/components/SortableTh";
 import { useTableSort, type SortAccessor } from "@/lib/useTableSort";
 import type { LatestEntry, DashboardData } from "@/lib/types";
 
-const dashboardColumns = [
-  { key: "project", label: "Project" },
+interface DashboardColumn {
+  key: string;
+  label: string;
+}
+
+const progressColumns: DashboardColumn[] = [
+  { key: "project", label: "Project ID" },
   { key: "workStream", label: "Work Stream" },
   { key: "currentStage", label: "Current Stage" },
-  { key: "date", label: "Date" },
-  { key: "note", label: "Note" },
+  { key: "ballHolder", label: "Ball Holder" },
+  { key: "duration", label: "Duration" },
 ];
 
-const dateValue = (entry: LatestEntry): number => {
-  const t = new Date(entry.bumpDate ?? entry.changedAt).getTime();
-  return Number.isFinite(t) ? t : 0;
-};
+const bumpColumns: DashboardColumn[] = [
+  { key: "project", label: "Project ID" },
+  { key: "workStream", label: "Work Stream" },
+  { key: "note", label: "Bump Msg" },
+  { key: "ballHolder", label: "Ball Holder" },
+  { key: "duration", label: "Duration" },
+];
 
 const dashboardAccessors: Record<string, SortAccessor<LatestEntry>> = {
-  project: (e) => e.projectName,
+  project: (e) => e.projectCode,
   workStream: (e) => e.workStreamName,
   currentStage: (e) => e.currentStage,
-  date: (e) => dateValue(e),
+  ballHolder: (e) => e.ballHolder,
   note: (e) => e.note,
+  duration: (e) => e.durationMs ?? 0,
 };
 
-function DashboardTable({ title, entries }: { title: string; entries: LatestEntry[] }) {
+interface RenderContext {
+  entry: LatestEntry;
+}
+
+type CellRenderer = (ctx: RenderContext) => ReactNode;
+
+function ProjectCell({ entry }: RenderContext) {
+  return (
+    <Link
+      href={`/projects/${entry.projectId}`}
+      style={{ color: "var(--accent)", textDecoration: "none" }}
+    >
+      {entry.projectCode || entry.projectName}
+    </Link>
+  );
+}
+
+const cellRenderers: Record<string, CellRenderer> = {
+  project: ({ entry }) => <ProjectCell entry={entry} />,
+  workStream: ({ entry }) => entry.workStreamName || "—",
+  currentStage: ({ entry }) => entry.currentStage || "—",
+  ballHolder: ({ entry }) => entry.ballHolder || "—",
+  note: ({ entry }) => entry.note || "—",
+  duration: ({ entry }) => entry.duration || "—",
+};
+
+const cellStyles: Record<string, CSSProperties> = {
+  workStream: { color: "var(--ink-secondary)" },
+  ballHolder: { color: "var(--ink-secondary)" },
+  note: { color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  duration: { color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" },
+};
+
+function DashboardTable({
+  title,
+  entries,
+  columns,
+}: {
+  title: string;
+  entries: LatestEntry[];
+  columns: DashboardColumn[];
+}) {
   const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors);
 
   return (
@@ -46,7 +96,7 @@ function DashboardTable({ title, entries }: { title: string; entries: LatestEntr
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <thead>
             <tr>
-              {dashboardColumns.map((col) => (
+              {columns.map((col) => (
                 <SortableTh
                   key={col.key}
                   label={col.label}
@@ -64,7 +114,7 @@ function DashboardTable({ title, entries }: { title: string; entries: LatestEntr
           <tbody>
             {sortedRows.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                <td colSpan={columns.length} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                   No entries
                 </td>
               </tr>
@@ -76,24 +126,11 @@ function DashboardTable({ title, entries }: { title: string; entries: LatestEntr
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
                 >
-                  <td style={{ padding: "8px 10px" }}>
-                    <Link
-                      href={`/projects/${entry.projectId}`}
-                      style={{ color: "var(--accent)", textDecoration: "none" }}
-                    >
-                      {entry.projectName}
-                    </Link>
-                  </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
-                    {entry.workStreamName || "—"}
-                  </td>
-                  <td style={{ padding: "8px 10px" }}>{entry.currentStage || "—"}</td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    {(entry.bumpDate ? new Date(entry.bumpDate) : new Date(entry.changedAt)).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {entry.note || "—"}
-                  </td>
+                  {columns.map((col) => (
+                    <td key={col.key} style={{ padding: "8px 10px", ...cellStyles[col.key] }}>
+                      {cellRenderers[col.key]?.({ entry })}
+                    </td>
+                  ))}
                 </tr>
               ))
             )}
@@ -132,8 +169,8 @@ export default function DashboardPage() {
         Dashboard
       </h1>
       <div style={{ display: "flex", gap: "var(--space-lg)", flexWrap: "wrap" }}>
-        <DashboardTable title="Latest Progress" entries={data?.latestProgress ?? []} />
-        <DashboardTable title="Latest Bumps" entries={data?.latestBumps ?? []} />
+        <DashboardTable title="Latest Progress" entries={data?.latestProgress ?? []} columns={progressColumns} />
+        <DashboardTable title="Latest Bumps" entries={data?.latestBumps ?? []} columns={bumpColumns} />
       </div>
     </div>
   );

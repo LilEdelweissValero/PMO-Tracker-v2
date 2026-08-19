@@ -178,8 +178,12 @@ export interface LatestEntry {
   bumpDate: Date | null;
   workStreamName: string | null;
   projectName: string;
+  projectCode: string | null;
   currentStage: string | null;
   currentBall: string | null;
+  ballHolder: string | null;
+  durationMs: number | null;
+  duration: string | null;
 }
 
 export interface DashboardData {
