@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import DetailHero from "@/components/DetailHero";
 import HealthBadge from "@/components/HealthBadge";
 import DatePicker from "@/components/DatePicker";
@@ -26,6 +26,7 @@ interface BumpState {
 
 export default function ProjectDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = Number(params.id);
   const [project, setProject] = useState<ProjectWithWorkStreams | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,7 @@ export default function ProjectDetailPage() {
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -275,6 +277,17 @@ export default function ProjectDetailPage() {
     showToast("Work stream added");
   };
 
+  const deleteProject = async () => {
+    const res = await fetch(`/api/project/${projectId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? `Failed to delete project (${res.status})`);
+    }
+    playPing();
+    showToast("Project deleted");
+    router.replace("/projects");
+  };
+
   if (loading) {
     return (
       <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
@@ -459,6 +472,27 @@ export default function ProjectDetailPage() {
               boxSizing: "border-box",
             }}
           />
+        </Section>
+      </div>
+
+      <div style={{ marginTop: "var(--space-lg)" }}>
+        <Section title="Danger Zone">
+          <button
+            onClick={() => { playPrompt(); setShowDeleteConfirm(true); }}
+            style={{
+              padding: "7px 12px",
+              border: "1px solid var(--health-atrisk-ink)",
+              borderRadius: "var(--radius-md)",
+              backgroundColor: "var(--surface)",
+              color: "var(--health-atrisk-ink)",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontFamily: "var(--font-sans)",
+              fontWeight: 600,
+            }}
+          >
+            Delete Project
+          </button>
         </Section>
       </div>
 
@@ -709,6 +743,45 @@ export default function ProjectDetailPage() {
           setShowManageSystems(false);
         }}
       />
+
+      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Project">
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", margin: 0, lineHeight: 1.5 }}>
+            This will remove <strong style={{ color: "var(--ink-primary)" }}>{project.name}</strong> from the tracker. This action cannot be undone.
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)" }}>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{
+                padding: "7px 12px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "var(--surface)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={deleteProject}
+              style={{
+                padding: "7px 12px",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                backgroundColor: "var(--health-atrisk-ink)",
+                color: "#FFFFFF",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
