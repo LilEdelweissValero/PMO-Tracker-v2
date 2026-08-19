@@ -230,7 +230,7 @@ export default function DashboardPage() {
       <BumpModal
         open={bumpTarget !== null}
         projectId={bumpTarget?.projectId ?? 0}
-        workStreamId={bumpTarget?.workStreamId ?? 0}
+        workStreamIds={bumpTarget ? [bumpTarget.workStreamId] : []}
         onClose={() => setBumpTarget(null)}
         onSaved={loadDashboard}
       />

@@ -477,7 +477,7 @@ export default function ProjectDetailPage() {
       <BumpModal
         open={bumpWsId !== null}
         projectId={projectId}
-        workStreamId={bumpWsId ?? 0}
+        workStreamIds={bumpWsId !== null ? [bumpWsId] : []}
         onClose={() => setBumpWsId(null)}
         onSaved={refetch}
       />

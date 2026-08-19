@@ -4,9 +4,10 @@ interface DatePickerProps {
   value: string;
   onChange: (date: string) => void;
   label?: string;
+  withTime?: boolean;
 }
 
-export default function DatePicker({ value, onChange, label }: DatePickerProps) {
+export default function DatePicker({ value, onChange, label, withTime }: DatePickerProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
       {label && (
@@ -23,7 +24,7 @@ export default function DatePicker({ value, onChange, label }: DatePickerProps) 
         </label>
       )}
       <input
-        type="date"
+        type={withTime ? "datetime-local" : "date"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
