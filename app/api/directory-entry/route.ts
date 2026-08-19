@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 export async function GET() {
   const entries = await prisma.systemModuleEntry.findMany({
     where: { archived: false },
-    orderBy: [{ system: "asc" }, { module: "asc" }, { sortOrder: "asc" }],
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   });
   return NextResponse.json(entries);
 }

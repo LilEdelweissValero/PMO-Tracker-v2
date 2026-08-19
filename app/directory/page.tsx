@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import ComboField, { inputStyle } from "@/components/ComboField";
+import SortableTh from "@/components/SortableTh";
+import SaveOrderBar from "@/components/SaveOrderBar";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
+import { useColumnSort, type SortAccessor, type SortState } from "@/lib/useColumnSort";
 import type { SystemModuleEntry, UnitInvolved } from "@/lib/types";
 
 interface DepartmentItem {
@@ -12,7 +15,52 @@ interface DepartmentItem {
   details: string | null;
 }
 
-const columns = ["System", "Acronym", "Module", "Developer Assigned", "System Owner (Name)", "System Owner (Department)", "Actions"];
+interface SortableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
+const entryColumns: SortableColumn[] = [
+  { key: "system", label: "System" },
+  { key: "acronym", label: "Acronym" },
+  { key: "module", label: "Module" },
+  { key: "developerAssigned", label: "Developer Assigned" },
+  { key: "systemOwnerName", label: "System Owner (Name)" },
+  { key: "systemOwnerDept", label: "System Owner (Department)" },
+  { key: "actions", label: "Actions", sortable: false },
+];
+
+const deptColumns: SortableColumn[] = [
+  { key: "name", label: "Name" },
+  { key: "details", label: "Details" },
+  { key: "actions", label: "Actions", sortable: false },
+];
+
+const unitColumns: SortableColumn[] = [
+  { key: "group", label: "Group" },
+  { key: "name", label: "Name" },
+  { key: "actions", label: "Actions", sortable: false },
+];
+
+const entryAccessors: Record<string, SortAccessor<SystemModuleEntry>> = {
+  system: (e) => e.system,
+  acronym: (e) => e.acronym,
+  module: (e) => e.module,
+  developerAssigned: (e) => e.developerAssigned,
+  systemOwnerName: (e) => e.systemOwnerName,
+  systemOwnerDept: (e) => e.systemOwnerDept,
+};
+
+const deptAccessors: Record<string, SortAccessor<DepartmentItem>> = {
+  name: (d) => d.name,
+  details: (d) => d.details,
+};
+
+const unitAccessors: Record<string, SortAccessor<UnitInvolved>> = {
+  group: (u) => u.group,
+  name: (u) => u.name,
+};
 
 const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
 
@@ -102,6 +150,22 @@ export default function DirectoryPage() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  const entriesSort = useColumnSort(entries, entryAccessors, "directory-entry", () => {
+    fetchAll();
+    playPing();
+    showToast("Order saved");
+  });
+  const deptsSort = useColumnSort(departments, deptAccessors, "directory-department", () => {
+    fetchAll();
+    playPing();
+    showToast("Order saved");
+  });
+  const unitsSort = useColumnSort(units, unitAccessors, "unit-involved", () => {
+    fetchAll();
+    playPing();
+    showToast("Order saved");
+  });
 
   const addEntry = async () => {
     if (!newSystem.trim()) return;
@@ -242,25 +306,20 @@ export default function DirectoryPage() {
     showToast("Entry deleted");
   };
 
-  const renderTableHeader = (headers: string[]) => (
+  const renderTableHeader = (cols: SortableColumn[], sortState: SortState | null, onToggle: (key: string) => void) => (
     <tr>
-      {headers.map((h) => (
-        <th
-          key={h}
+      {cols.map((col) => (
+        <SortableTh
+          key={col.key}
+          label={col.label}
+          sort={sortState}
+          sortKey={col.sortable === false ? undefined : col.key}
+          onSort={col.sortable === false ? undefined : onToggle}
           style={{
-            padding: "8px 10px",
-            textAlign: "left",
-            fontSize: "10px",
-            fontWeight: 600,
-            letterSpacing: "0.07em",
-            textTransform: "uppercase",
             backgroundColor: "var(--ground-metric)",
             borderBottom: "1px solid var(--rule-strong)",
-            fontFamily: "var(--font-sans)",
           }}
-        >
-          {h}
-        </th>
+        />
       ))}
     </tr>
   );
@@ -372,19 +431,24 @@ export default function DirectoryPage() {
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              {entriesSort.sort ? (
+                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
+                  <SaveOrderBar saving={entriesSort.saving} error={entriesSort.saveError} onSave={entriesSort.saveOrder} />
+                </div>
+              ) : null}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  {renderTableHeader(columns)}
+                  {renderTableHeader(entryColumns, entriesSort.sort, entriesSort.toggleSort)}
                 </thead>
                 <tbody>
-                  {entries.length === 0 ? (
+                  {entriesSort.sortedRows.length === 0 ? (
                     <tr>
-                      <td colSpan={columns.length} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                      <td colSpan={entryColumns.length} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                         No entries
                       </td>
                     </tr>
                   ) : (
-                    entries.map((entry) => (
+                    entriesSort.sortedRows.map((entry) => (
                       <tr key={entry.id} style={{ borderBottom: "1px solid var(--rule)" }}>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (
@@ -518,19 +582,24 @@ export default function DirectoryPage() {
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              {deptsSort.sort ? (
+                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
+                  <SaveOrderBar saving={deptsSort.saving} error={deptsSort.saveError} onSave={deptsSort.saveOrder} />
+                </div>
+              ) : null}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  {renderTableHeader(["Name", "Details", "Actions"])}
+                  {renderTableHeader(deptColumns, deptsSort.sort, deptsSort.toggleSort)}
                 </thead>
                 <tbody>
-                  {departments.length === 0 ? (
+                  {deptsSort.sortedRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                         No items
                       </td>
                     </tr>
                   ) : (
-                    departments.map((item) => (
+                    deptsSort.sortedRows.map((item) => (
                       <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === item.id ? (
@@ -638,19 +707,24 @@ export default function DirectoryPage() {
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              {unitsSort.sort ? (
+                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
+                  <SaveOrderBar saving={unitsSort.saving} error={unitsSort.saveError} onSave={unitsSort.saveOrder} />
+                </div>
+              ) : null}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  {renderTableHeader(["Group", "Name", "Actions"])}
+                  {renderTableHeader(unitColumns, unitsSort.sort, unitsSort.toggleSort)}
                 </thead>
                 <tbody>
-                  {units.length === 0 ? (
+                  {unitsSort.sortedRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                         No items
                       </td>
                     </tr>
                   ) : (
-                    units.map((item) => (
+                    unitsSort.sortedRows.map((item) => (
                       <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
                         <td style={{ padding: "8px 10px" }}>
                           {editingUnitId === item.id ? (

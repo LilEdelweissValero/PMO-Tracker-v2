@@ -3,10 +3,32 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import EntityFormModal from "@/components/EntityFormModal";
+import SortableTh from "@/components/SortableTh";
+import SaveOrderBar from "@/components/SaveOrderBar";
+import { useColumnSort, type SortAccessor } from "@/lib/useColumnSort";
 import { computeAggregateStatus, getStatusColorClass } from "@/lib/feature";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams } from "@/lib/types";
+
+const getSystemLabel = (project: ProjectWithWorkStreams): string => {
+  const systems = project.systems ?? [];
+  if (systems.length > 0) {
+    return systems.map((s) => s.acronym || s.system).join(", ");
+  }
+  return project.systemName || "—";
+};
+
+const projectAccessors: Record<string, SortAccessor<ProjectWithWorkStreams>> = {
+  id: (p) => p.projectId,
+  name: (p) => p.name,
+  systemName: (p) => getSystemLabel(p),
+  status: (p) => computeAggregateStatus(p.workStreams),
+  priority: (p) => p.priority,
+  pmOfficer: (p) => p.pmOfficer,
+  requestType: (p) => p.requestType,
+  initiatedBy: (p) => p.initiatedBy,
+};
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
@@ -24,6 +46,19 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => { fetchProjects(); }, []);
+
+  const {
+    sort,
+    sortedRows,
+    toggleSort,
+    saveOrder,
+    saving,
+    saveError,
+  } = useColumnSort(projects, projectAccessors, "project", () => {
+    fetchProjects();
+    playPing();
+    showToast("Order saved");
+  });
 
   const handleCreate = async (data: Record<string, string | number | number[]>) => {
     const res = await fetch("/api/project", {
@@ -83,34 +118,30 @@ export default function ProjectsPage() {
       </div>
 
       <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+        {sort ? <div style={{ padding: "var(--space-sm) var(--space-md)" }}><SaveOrderBar saving={saving} error={saveError} onSave={saveOrder} /></div> : null}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <thead>
             <tr>
               {columns.map((col) => (
-                <th
+                <SortableTh
                   key={col.key}
+                  label={col.label}
+                  sort={sort}
+                  sortKey={col.key}
+                  onSort={toggleSort}
                   style={{
-                    padding: "8px 10px",
-                    textAlign: "left",
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    letterSpacing: "0.07em",
-                    textTransform: "uppercase",
                     backgroundColor: col.zone === "identity" ? "var(--ink-primary)" : "var(--ground-metric)",
                     color: col.zone === "identity" ? "var(--ink-on-dark)" : "var(--ink-primary)",
                     borderBottom: "1px solid var(--rule-strong)",
                     borderRight: col.zone === "identity" ? "1px solid var(--ink-secondary)" : "none",
                     width: col.width,
-                    fontFamily: "var(--font-sans)",
                   }}
-                >
-                  {col.label}
-                </th>
+                />
               ))}
             </tr>
           </thead>
           <tbody>
-            {projects.map((project) => {
+            {sortedRows.map((project) => {
               const status = computeAggregateStatus(project.workStreams);
               const colors = getStatusColorClass(status);
               return (
@@ -132,14 +163,7 @@ export default function ProjectsPage() {
                     </Link>
                   </td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
-                    {(() => {
-                      const systems = project.systems ?? [];
-                      if (systems.length > 0) {
-                        const labels = systems.map((s) => s.acronym || s.system);
-                        return labels.join(", ");
-                      }
-                      return project.systemName || "—";
-                    })()}
+                    {getSystemLabel(project)}
                   </td>
                   <td style={{ padding: "8px 10px" }}>
                     <span

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   const entries = await prisma.unitInvolved.findMany({
     where,
-    orderBy: [{ group: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   });
 
   return NextResponse.json(entries);

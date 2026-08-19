@@ -19,6 +19,9 @@ import {
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import SortableRow from "@/components/SortableRow";
+import SortableTh from "@/components/SortableTh";
+import SaveOrderBar from "@/components/SaveOrderBar";
+import { useColumnSort, type SortAccessor } from "@/lib/useColumnSort";
 
 interface ConfigItem {
   id: number;
@@ -26,6 +29,17 @@ interface ConfigItem {
   value: string;
   sortOrder: number;
 }
+
+const adminColumns = [
+  { key: "grip", label: "", sortable: false },
+  { key: "index", label: "#", sortable: false },
+  { key: "value", label: "Value" },
+  { key: "actions", label: "Actions", sortable: false },
+];
+
+const adminAccessors: Record<string, SortAccessor<ConfigItem>> = {
+  value: (c) => c.value,
+};
 
 export default function AdminPage() {
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
@@ -74,6 +88,17 @@ export default function AdminPage() {
       .then((r) => r.json())
       .then((data) => setConfigs(data));
   };
+
+  const { sort, sortedRows, toggleSort, saveOrder, saving, saveError } = useColumnSort(
+    filtered,
+    adminAccessors,
+    "config-value",
+    () => {
+      refetch();
+      playPing();
+      showToast("Order saved");
+    }
+  );
 
   const addItem = async () => {
     if (!newValue.trim()) return;
@@ -215,31 +240,31 @@ export default function AdminPage() {
         <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
       ) : (
         <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+          {sort ? (
+            <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
+              <SaveOrderBar saving={saving} error={saveError} onSave={saveOrder} />
+            </div>
+          ) : null}
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["", "#", "Value", "Actions"].map((h) => (
-                  <th
-                    key={h}
+                {adminColumns.map((col) => (
+                  <SortableTh
+                    key={col.key}
+                    label={col.label}
+                    sort={sort}
+                    sortKey={col.sortable === false ? undefined : col.key}
+                    onSort={col.sortable === false ? undefined : toggleSort}
                     style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
                       backgroundColor: "var(--ground-metric)",
                       borderBottom: "1px solid var(--rule-strong)",
-                      fontFamily: "var(--font-sans)",
                     }}
-                  >
-                    {h}
-                  </th>
+                  />
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {sortedRows.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                     No values configured
@@ -247,9 +272,9 @@ export default function AdminPage() {
                 </tr>
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={filtered.map((c) => String(c.id))} strategy={verticalListSortingStrategy}>
-                    {filtered.map((item, idx) => (
-                      <SortableRow key={item.id} id={String(item.id)}>
+                  <SortableContext items={sortedRows.map((c) => String(c.id))} strategy={verticalListSortingStrategy}>
+                    {sortedRows.map((item, idx) => (
+                      <SortableRow key={item.id} id={String(item.id)} disabled={sort !== null}>
                         <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums", color: "var(--ink-tertiary)" }}>
                           {idx + 1}
                         </td>

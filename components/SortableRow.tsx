@@ -7,9 +7,10 @@ interface SortableRowProps {
   id: string;
   children: React.ReactNode;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
-export default function SortableRow({ id, children, onClick }: SortableRowProps) {
+export default function SortableRow({ id, children, onClick, disabled }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -23,7 +24,7 @@ export default function SortableRow({ id, children, onClick }: SortableRowProps)
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
-    cursor: isDragging ? "grabbing" : "default",
+    cursor: isDragging ? "grabbing" : disabled ? "default" : "grab",
     borderBottom: "1px solid var(--rule)",
   };
 
@@ -42,14 +43,14 @@ export default function SortableRow({ id, children, onClick }: SortableRowProps)
       <td
         style={{
           padding: "2px 4px",
-          cursor: "grab",
+          cursor: disabled ? "default" : "grab",
           width: "20px",
           textAlign: "center",
-          color: "var(--ink-tertiary)",
+          color: disabled ? "var(--rule-strong)" : "var(--ink-tertiary)",
           verticalAlign: "middle",
         }}
-        {...attributes}
-        {...listeners}
+        {...(disabled ? {} : attributes)}
+        {...(disabled ? {} : listeners)}
       >
         <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
           <circle cx="3" cy="2" r="1.2" />
