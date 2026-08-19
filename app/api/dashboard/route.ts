@@ -7,6 +7,7 @@ interface WorkStreamEnrich {
   name: string | null;
   currentBall: string | null;
   assignedDeveloper: string | null;
+  archived: boolean;
   flowStages: {
     id: number;
     workStreamId: number;
@@ -23,6 +24,7 @@ interface WorkStreamEnrich {
     projectId: string;
     pmOfficer: string | null;
     systemOwnerName: string | null;
+    archived: boolean;
   };
 }
 
@@ -85,6 +87,7 @@ export async function GET(request: NextRequest) {
           projectId: true,
           pmOfficer: true,
           systemOwnerName: true,
+          archived: true,
         },
       },
       flowStages: { where: { archived: false } },
@@ -92,32 +95,39 @@ export async function GET(request: NextRequest) {
   });
 
   const wsMap = new Map(workStreams.map((ws) => [ws.id, ws]));
+  const activeWsIds = new Set(
+    workStreams
+      .filter((ws) => !ws.archived && !ws.project.archived)
+      .map((ws) => ws.id)
+  );
 
   const enrich = (logs: typeof progressLogs, kind: "progress" | "bump") =>
-    logs.map((log) => {
-      const ws = wsMap.get(log.workStreamId!) as WorkStreamEnrich | undefined;
-      const stages = ws ? buildStagesWithDerived(ws.flowStages) : [];
-      const currentStage = computeCurrentStage(stages);
+    logs
+      .filter((log) => log.workStreamId && activeWsIds.has(log.workStreamId))
+      .map((log) => {
+        const ws = wsMap.get(log.workStreamId!) as WorkStreamEnrich | undefined;
+        const stages = ws ? buildStagesWithDerived(ws.flowStages) : [];
+        const currentStage = computeCurrentStage(stages);
 
-      const ballGroup = kind === "bump" ? log.newValue || ws?.currentBall || null : ws?.currentBall ?? null;
-      const anchor =
-        kind === "bump"
-          ? (log.bumpDate ?? log.changedAt).getTime()
-          : currentStage?.actualDate?.getTime() ?? null;
-      const durationMs = anchor === null ? null : Math.max(0, reference.getTime() - anchor);
+        const ballGroup = kind === "bump" ? log.newValue || ws?.currentBall || null : ws?.currentBall ?? null;
+        const anchor =
+          kind === "bump"
+            ? (log.bumpDate ?? log.changedAt).getTime()
+            : currentStage?.actualDate?.getTime() ?? null;
+        const durationMs = anchor === null ? null : Math.max(0, reference.getTime() - anchor);
 
-      return {
-        ...log,
-        workStreamName: ws?.name ?? null,
-        projectName: ws?.project.name ?? "Unknown",
-        projectCode: ws?.project.projectId ?? null,
-        currentStage: currentStage?.name ?? "Not Started",
-        currentBall: ws?.currentBall ?? null,
-        ballHolder: ws ? formatBallHolder(ballGroup, ws) : null,
-        durationMs,
-        duration: formatDuration(durationMs),
-      };
-    });
+        return {
+          ...log,
+          workStreamName: ws?.name ?? null,
+          projectName: ws?.project.name ?? "Unknown",
+          projectCode: ws?.project.projectId ?? null,
+          currentStage: currentStage?.name ?? "Not Started",
+          currentBall: ws?.currentBall ?? null,
+          ballHolder: ws ? formatBallHolder(ballGroup, ws) : null,
+          durationMs,
+          duration: formatDuration(durationMs),
+        };
+      });
 
   return NextResponse.json({
     latestProgress: enrich(latestProgress, "progress"),
