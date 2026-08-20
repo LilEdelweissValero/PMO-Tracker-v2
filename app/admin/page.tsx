@@ -227,6 +227,45 @@ export default function AdminPage() {
         ))}
       </div>
 
+      <div
+        style={{
+          backgroundColor: "var(--ground-metric)",
+          border: "1px solid var(--rule)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-md)",
+          marginBottom: "var(--space-md)",
+          fontSize: "12px",
+          lineHeight: 1.6,
+          color: "var(--ink-secondary)",
+        }}
+      >
+        <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>
+          Connected Fields
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--space-sm) var(--space-lg)" }}>
+          <div>
+            <strong style={{ color: "var(--ink-primary)" }}>Status</strong> &larr;&rarr; <strong style={{ color: "var(--ink-primary)" }}>Default Stage Template</strong>
+            <div>Renaming a status automatically updates all stage templates referencing it.</div>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink-primary)" }}>Status</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Cards</strong> (runtime)
+            <div>Project status is computed from stage template progress. Renaming changes labels across the app.</div>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink-primary)" }}>Ball Groups</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Bump Modal, Ball View</strong>
+            <div>Group names appear in bump dialogs and ball view grouping.</div>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink-primary)" }}>Priority, Request Type, Initiated By</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Forms</strong>
+            <div>Values appear as dropdown options when creating or editing projects.</div>
+          </div>
+          <div>
+            <strong style={{ color: "var(--ink-primary)" }}>Requested By Name, Dept, PM Officer</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Forms</strong>
+            <div>Autocomplete options. New values are added on-the-fly when typed in project forms.</div>
+          </div>
+        </div>
+      </div>
+
       <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
         <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>{addLabel}</div>
         <div style={{ display: "flex", gap: "var(--space-sm)" }}>

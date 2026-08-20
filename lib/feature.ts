@@ -53,8 +53,8 @@ export function computeProjectStatus(
   workStreams: WorkStreamWithStages[],
   templateStages: TemplateStage[]
 ): string {
-  if (templateStages.length === 0) return "Not Yet Started";
-  if (workStreams.length === 0) return templateStages[0].status || "Not Yet Started";
+  if (templateStages.length === 0) return "";
+  if (workStreams.length === 0) return templateStages[0].status || "";
 
   const templateIndexByName = new Map(templateStages.map((t, i) => [t.name, i]));
 
@@ -73,21 +73,31 @@ export function computeProjectStatus(
   }
 
   if (bottleneckIdx === null) {
-    return templateStages[templateStages.length - 1].status || "Complete";
+    return templateStages[templateStages.length - 1].status || "";
   }
 
-  return templateStages[bottleneckIdx].status || "Not Yet Started";
+  return templateStages[bottleneckIdx].status || "";
 }
 
-export function getStatusColorClass(status: string): { bg: string; ink: string } {
-  const map: Record<string, { bg: string; ink: string }> = {
+const STATUS_COLOR_PREFIXES = ["nys", "planning", "partial", "mostly", "complete"];
+
+export function getStatusColorClass(status: string, allStatuses?: { value: string }[]): { bg: string; ink: string } {
+  if (allStatuses && allStatuses.length > 0) {
+    const idx = allStatuses.findIndex((s) => s.value === status);
+    const prefix = idx >= 0
+      ? (STATUS_COLOR_PREFIXES[idx] ?? STATUS_COLOR_PREFIXES[STATUS_COLOR_PREFIXES.length - 1])
+      : STATUS_COLOR_PREFIXES[0];
+    return { bg: `var(--status-${prefix}-bg)`, ink: `var(--status-${prefix}-ink)` };
+  }
+
+  const fallbackMap: Record<string, { bg: string; ink: string }> = {
     "Not Yet Started": { bg: "var(--status-nys-bg)", ink: "var(--status-nys-ink)" },
     Planning: { bg: "var(--status-planning-bg)", ink: "var(--status-planning-ink)" },
     "Partial Progress": { bg: "var(--status-partial-bg)", ink: "var(--status-partial-ink)" },
     "Mostly Done": { bg: "var(--status-mostly-bg)", ink: "var(--status-mostly-ink)" },
     Complete: { bg: "var(--status-complete-bg)", ink: "var(--status-complete-ink)" },
   };
-  return map[status] ?? { bg: "var(--status-nys-bg)", ink: "var(--status-nys-ink)" };
+  return fallbackMap[status] ?? { bg: "var(--status-nys-bg)", ink: "var(--status-nys-ink)" };
 }
 
 export function getHealthColorClass(health: string): { bg: string; ink: string } {

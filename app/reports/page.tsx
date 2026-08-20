@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DatePicker from "@/components/DatePicker";
 import { computeProjectStatus, getStatusColorClass } from "@/lib/feature";
@@ -12,7 +12,15 @@ export default function ReportsPage() {
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
+  const [projectStatuses, setProjectStatuses] = useState<{ value: string }[]>([]);
   const templateStages = useFlowTemplate();
+
+  useEffect(() => {
+    fetch("/api/config-value?category=project_status")
+      .then((r) => r.json())
+      .then((data) => setProjectStatuses(data as { value: string }[]))
+      .catch(() => {});
+  }, []);
 
   const fetchReport = async () => {
     if (!date) return;
@@ -90,7 +98,7 @@ export default function ReportsPage() {
               ) : (
                 projects.map((project) => {
                   const status = computeProjectStatus(project.workStreams, templateStages);
-                  const colors = getStatusColorClass(status);
+                  const colors = getStatusColorClass(status, projectStatuses);
                   return (
                     <tr key={project.id} style={{ borderBottom: "1px solid var(--rule)" }}>
                       <td style={{ padding: "8px 10px", borderRight: "1px solid var(--rule)" }}>{project.projectId}</td>

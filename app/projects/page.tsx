@@ -26,6 +26,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectWithWorkStreams[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [projectStatuses, setProjectStatuses] = useState<{ value: string }[]>([]);
   const templateStages = useFlowTemplate();
 
   const fetchProjects = () => {
@@ -39,6 +40,13 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => { fetchProjects(); }, []);
+
+  useEffect(() => {
+    fetch("/api/config-value?category=project_status")
+      .then((r) => r.json())
+      .then((data) => setProjectStatuses(data as { value: string }[]))
+      .catch(() => {});
+  }, []);
 
   const projectAccessors: Record<string, SortAccessor<ProjectWithWorkStreams>> = {
     id: (p) => p.projectId,
@@ -150,7 +158,7 @@ export default function ProjectsPage() {
           <tbody>
             {sortedRows.map((project) => {
               const status = computeProjectStatus(project.workStreams, templateStages);
-              const colors = getStatusColorClass(status);
+              const colors = getStatusColorClass(status, projectStatuses);
               return (
                 <tr
                   key={project.id}

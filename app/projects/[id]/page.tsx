@@ -33,6 +33,7 @@ export default function ProjectDetailPage() {
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [projectStatuses, setProjectStatuses] = useState<{ value: string }[]>([]);
   const autoBumpOpened = useRef(false);
   const templateStages = useFlowTemplate();
 
@@ -53,6 +54,12 @@ export default function ProjectDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) setUnits(data as UnitInvolved[]);
+      })
+      .catch(() => {});
+    fetch("/api/config-value?category=project_status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setProjectStatuses(data as { value: string }[]);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -255,7 +262,7 @@ export default function ProjectDetailPage() {
   }
 
   const status = computeProjectStatus(project.workStreams, templateStages);
-  const statusColors = getStatusColorClass(status);
+  const statusColors = getStatusColorClass(status, projectStatuses);
   const refs: ReferenceLink[] = Array.isArray(project.references) ? project.references : [];
 
   const metaFields = [

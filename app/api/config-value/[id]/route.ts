@@ -29,6 +29,11 @@ export async function PATCH(
   }
 
   const body = await request.json();
+  const existing = await prisma.configValue.findUnique({ where: { id: configId } });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const config = await prisma.configValue.update({
     where: { id: configId },
     data: {
@@ -38,6 +43,17 @@ export async function PATCH(
       archived: body.archived !== undefined ? body.archived : undefined,
     },
   });
+
+  if (
+    body.value !== undefined &&
+    existing.category === "project_status" &&
+    body.value !== existing.value
+  ) {
+    await prisma.configValue.updateMany({
+      where: { category: "flow_template", status: existing.value, archived: false },
+      data: { status: body.value },
+    });
+  }
 
   return NextResponse.json(config);
 }
