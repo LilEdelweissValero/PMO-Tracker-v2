@@ -283,6 +283,9 @@ export default function ProjectDetailPage() {
           <FieldRow label="Name" value={project.name} onEdit={() => { playPrompt(); setEditingField("name"); }} />
           <FieldRow label="Priority" value={project.priority} onEdit={() => { playPrompt(); setEditingField("priority"); }} />
           <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => { playPrompt(); setEditingField("scopeDescription"); }} multiline large />
+          <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
+          <FieldRow label="Project Owner" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
+          <FieldRow label="Business Unit" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
           <div style={{ marginTop: "var(--space-sm)" }}>
             <div className="label-caps" style={{ marginBottom: "4px", color: "var(--ink-tertiary)" }}>References</div>
             <LinkEditor
@@ -292,14 +295,6 @@ export default function ProjectDetailPage() {
           </div>
         </Section>
 
-        <Section title="Project Owner">
-          <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
-          <FieldRow label="Project Owner" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
-          <FieldRow label="Business Unit" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
-        </Section>
-      </div>
-
-      <div style={{ marginTop: "var(--space-lg)" }}>
         <Section title="System Affected">
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-sm)" }}>
             <button
@@ -320,7 +315,7 @@ export default function ProjectDetailPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["System", "Module", "Owner", "Owner Dept", "Request Type", "Developer Assigned"].map((h) => (
+                {["System", "Module", "Owner", "Owner Dept", "Developer Assigned"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -343,8 +338,8 @@ export default function ProjectDetailPage() {
             <tbody>
               {systems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
-                    No systems affected
+                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                    No chosen system yet.
                   </td>
                 </tr>
               ) : (
@@ -354,7 +349,6 @@ export default function ProjectDetailPage() {
                     <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.module || "—"}</td>
                     <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerName || "—"}</td>
                     <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerDept || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{project.requestType || "—"}</td>
                     <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.developerAssigned || "—"}</td>
                   </tr>
                 ))
