@@ -89,44 +89,46 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
         </div>
 
         <div style={{ flex: "0 1 auto", minWidth: 200 }}>
-          {acronyms.length > 0 && (
-            <>
-              <div
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                  marginBottom: "var(--space-sm)",
-                }}
-              >
-                Systems Affected
-              </div>
-              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {acronyms.map((acr, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      padding: "3px 9px",
-                      borderRadius: "var(--radius-sm)",
-                      backgroundColor: "var(--accent-bg)",
-                      color: "var(--accent)",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      letterSpacing: "0.04em",
-                      fontFamily: "var(--font-sans)",
-                    }}
-                  >
-                    {acr}
-                  </span>
-                ))}
-              </div>
-            </>
+          <div
+            style={{
+              fontSize: "10px",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--ink-tertiary)",
+              marginBottom: "var(--space-sm)",
+            }}
+          >
+            Systems Affected
+          </div>
+          {acronyms.length > 0 ? (
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              {acronyms.map((acr, i) => (
+                <span
+                  key={i}
+                  style={{
+                    padding: "3px 9px",
+                    borderRadius: "var(--radius-sm)",
+                    backgroundColor: "var(--accent-bg)",
+                    color: "var(--accent)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                    fontFamily: "var(--font-sans)",
+                  }}
+                >
+                  {acr}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>
+              No chosen system yet.
+            </div>
           )}
 
           {status && (
-            <div style={{ marginTop: acronyms.length > 0 ? "var(--space-md)" : 0 }}>
+            <div style={{ marginTop: "var(--space-md)" }}>
               <div
                 style={{
                   fontSize: "10px",
