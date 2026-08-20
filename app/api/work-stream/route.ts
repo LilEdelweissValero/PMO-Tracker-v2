@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     projectId: body.projectId,
     name: body.name ?? project.name,
     assignedDeveloper: body.assignedDeveloper ?? null,
-    currentBall: body.currentBall ?? "PMO",
+    currentBall: body.currentBall ?? "Project Management Office",
     changedBy: body.changedBy ?? "System",
   });
 

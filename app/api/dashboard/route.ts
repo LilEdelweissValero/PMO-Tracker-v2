@@ -28,14 +28,15 @@ interface WorkStreamEnrich {
   };
 }
 
-function formatBallHolder(ballGroup: string | null, ws: WorkStreamEnrich): string {
-  const group = ballGroup?.trim() || "PMO";
+function formatBallHolder(ballGroup: string | null, ws: WorkStreamEnrich, acronymMap: Map<string, string>): string {
+  const group = ballGroup?.trim() || "Project Management Office";
   const normalized = group.toLowerCase();
   let person: string | null = null;
-  if (normalized === "pmo") person = ws.project.pmOfficer;
+  if (normalized === "project management office") person = ws.project.pmOfficer;
   else if (normalized === "developers") person = ws.assignedDeveloper;
-  else if (normalized === "system owner") person = ws.project.systemOwnerName;
-  return person ? `${group} - ${person}` : group;
+  else if (normalized === "business unit") person = ws.project.systemOwnerName;
+  const label = acronymMap.get(normalized) || group;
+  return person ? `${label} - ${person}` : label;
 }
 
 export async function GET(request: NextRequest) {
@@ -58,6 +59,16 @@ export async function GET(request: NextRequest) {
     where: { ...whereClause, entryType: "bump" },
     orderBy: { changedAt: "desc" },
   });
+
+  const ballGroups = await prisma.configValue.findMany({
+    where: { category: "ball_groups", archived: false },
+    orderBy: { sortOrder: "asc" },
+  });
+  const acronymMap = new Map<string, string>(
+    ballGroups
+      .filter((g) => g.acronym)
+      .map((g) => [g.value.toLowerCase(), g.acronym!])
+  );
 
   const getLatestPerWorkStream = (logs: typeof progressLogs) => {
     const seen = new Set<number>();
@@ -123,7 +134,7 @@ export async function GET(request: NextRequest) {
           projectCode: ws?.project.projectId ?? null,
           currentStage: currentStage?.name ?? "Not Started",
           currentBall: ws?.currentBall ?? null,
-          ballHolder: ws ? formatBallHolder(ballGroup, ws) : null,
+          ballHolder: ws ? formatBallHolder(ballGroup, ws, acronymMap) : null,
           durationMs,
           duration: formatDuration(durationMs),
         };

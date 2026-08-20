@@ -115,6 +115,7 @@ export interface UnitInvolved {
 export interface ConfigValueCreate {
   category: string;
   value: string;
+  acronym?: string;
   sortOrder?: number;
 }
 

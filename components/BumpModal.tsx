@@ -9,7 +9,7 @@ import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { UnitInvolved, WorkStreamWithStages } from "@/lib/types";
 
-const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -145,7 +145,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
         const selected = initial.length ? initial : streams[0] ? [streams[0].id] : [];
         setSelectedWsIds(selected);
         const active = streams.find((w) => w.id === selected[0]) ?? null;
-        setBallGroup(active?.currentBall || resolvedGroups[0] || "PMO");
+        setBallGroup(active?.currentBall || resolvedGroups[0] || "Project Management Office");
         setBallPerson("");
         setTaskDone(false);
         setHasProgress(false);
@@ -207,7 +207,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
         const newActive = workStreams.find((w) => w.id === next[0]);
         if (newActive && newActive.id !== activeWs?.id) {
           setProgressStageId(null);
-          setBallGroup(newActive.currentBall || ballGroup || "PMO");
+          setBallGroup(newActive.currentBall || ballGroup || "Project Management Office");
         }
       }
       return next;

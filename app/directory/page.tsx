@@ -62,10 +62,10 @@ const unitAccessors: Record<string, SortAccessor<UnitInvolved>> = {
   name: (u) => u.name,
 };
 
-const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
 const DEVELOPER_SOURCE = { url: "/api/unit-involved?group=Developers", valueKey: "name" };
-const OWNER_SOURCE = { url: `/api/unit-involved?group=${encodeURIComponent("System Owner")}`, valueKey: "name" };
+const OWNER_SOURCE = { url: `/api/unit-involved?group=${encodeURIComponent("Business Unit")}`, valueKey: "name" };
 
 export default function DirectoryPage() {
   const [tab, setTab] = useState<"systems" | "departments" | "units">("systems");
@@ -100,6 +100,7 @@ export default function DirectoryPage() {
   const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
   const [editUnitGroup, setEditUnitGroup] = useState("");
   const [editUnitName, setEditUnitName] = useState("");
+  const [groupAcronymMap, setGroupAcronymMap] = useState<Map<string, string>>(new Map());
 
   const fetchAll = async () => {
     const [entryRes, deptRes, unitRes, configRes] = await Promise.all([
@@ -115,10 +116,10 @@ export default function DirectoryPage() {
     if (deptRes.ok) setDepartments(await deptRes.json());
     if (unitRes.ok) setUnits(await unitRes.json());
     if (configRes.ok) {
-      const groups = (await configRes.json() as { value: string }[])
-        .map((c) => c.value)
-        .filter((v) => v.trim());
+      const configData = await configRes.json() as { value: string; acronym?: string | null }[];
+      const groups = configData.map((c) => c.value).filter((v) => v.trim());
       if (groups.length) setUnitGroups(groups);
+      setGroupAcronymMap(new Map(configData.filter((c) => c.acronym).map((c) => [c.value, c.acronym!])));
     }
     setLoading(false);
   };
@@ -131,17 +132,18 @@ export default function DirectoryPage() {
       fetch("/api/unit-involved").then((r) => r.json()),
       fetch("/api/config-value?category=ball_groups")
         .then((r) => r.json())
-        .catch(() => [] as { value: string }[]),
+        .catch(() => [] as { value: string; acronym?: string | null }[]),
     ])
       .then(([e, d, u, config]) => {
         if (!cancelled) {
           setEntries(e);
           setDepartments(d);
           setUnits(u);
-          const groups = (config as { value: string }[])
+          const groups = (config as { value: string; acronym?: string | null }[])
             .map((c) => c.value)
             .filter((v) => v.trim());
           if (groups.length) setUnitGroups(groups);
+          setGroupAcronymMap(new Map((config as { value: string; acronym?: string | null }[]).filter((c) => c.acronym).map((c) => [c.value, c.acronym!])));
           setLoading(false);
         }
       })
@@ -744,7 +746,7 @@ export default function DirectoryPage() {
                               ))}
                             </select>
                           ) : (
-                            item.group
+                            <span title={item.group}>{groupAcronymMap.get(item.group) || item.group}</span>
                           )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>

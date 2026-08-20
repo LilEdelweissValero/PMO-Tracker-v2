@@ -6,7 +6,7 @@ import SortableTh from "@/components/SortableTh";
 import { useTableSort, type SortAccessor } from "@/lib/useTableSort";
 import type { LatestEntry, BallViewData } from "@/lib/types";
 
-const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
 const ballColumns = [
   { key: "project", label: "Project" },

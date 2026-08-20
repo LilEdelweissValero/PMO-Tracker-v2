@@ -61,7 +61,7 @@ model WorkStream {
   projectId         Int       @map("project_id")
   name              String?
   assignedDeveloper String?   @map("assigned_developer")
-  currentBall       String    @default("PMO") @map("current_ball")
+  currentBall       String    @default("Project Management Office") @map("current_ball")
   archived          Boolean   @default(false)
   sortOrder         Int       @default(0) @map("sort_order")
   createdAt         DateTime  @default(now()) @map("created_at")
@@ -155,6 +155,7 @@ model ConfigValue {
   id        Int      @id @default(autoincrement())
   category  String
   value     String
+  acronym   String?
   status    String?
   sortOrder Int      @default(0) @map("sort_order")
   archived  Boolean  @default(false)

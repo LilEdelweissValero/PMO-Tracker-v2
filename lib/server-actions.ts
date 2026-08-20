@@ -46,7 +46,7 @@ export async function createWorkStreamWithStages(params: {
       projectId: params.projectId,
       name: params.name ?? null,
       assignedDeveloper: params.assignedDeveloper ?? null,
-      currentBall: params.currentBall ?? "PMO",
+      currentBall: params.currentBall ?? "Project Management Office",
       flowStages: {
         create: templateStages.map((stage, i) => ({
           name: stage.value,
@@ -74,7 +74,7 @@ export async function createWorkStreamWithStages(params: {
         projectId: params.projectId,
         entryType: "bump",
         fieldName: "status",
-        newValue: "PMO",
+        newValue: "Project Management Office",
         note: "Not Started",
         changedBy,
       },

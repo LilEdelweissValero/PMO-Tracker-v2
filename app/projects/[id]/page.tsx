@@ -15,7 +15,7 @@ import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved, FormValue } from "@/lib/types";
 
-const FALLBACK_BALL_GROUPS = ["PMO", "Developers", "System Owner"];
+const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -27,6 +27,7 @@ export default function ProjectDetailPage() {
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
   const [showManageSystems, setShowManageSystems] = useState(false);
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
+  const [ballGroupAcronymMap, setBallGroupAcronymMap] = useState<Map<string, string>>(new Map());
   const [units, setUnits] = useState<UnitInvolved[]>([]);
   const [bumpWsId, setBumpWsId] = useState<number | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
@@ -43,10 +44,10 @@ export default function ProjectDetailPage() {
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) {
-          const groups = (data as { value: string }[])
-            .map((c) => c.value)
-            .filter((v) => v.trim());
+          const configData = data as { value: string; acronym?: string | null }[];
+          const groups = configData.map((c) => c.value).filter((v) => v.trim());
           if (groups.length) setBallGroups(groups);
+          setBallGroupAcronymMap(new Map(configData.filter((c) => c.acronym).map((c) => [c.value, c.acronym!])));
         }
       })
       .catch(() => {});
@@ -390,6 +391,7 @@ export default function ProjectDetailPage() {
             key={ws.id}
             ws={ws}
             ballGroups={ballGroups}
+            ballGroupAcronymMap={ballGroupAcronymMap}
             units={units}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
             onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
@@ -757,6 +759,7 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
 function WorkStreamCard({
   ws,
   ballGroups,
+  ballGroupAcronymMap,
   units,
   onUpdateName,
   onUpdateDeveloper,
@@ -770,6 +773,7 @@ function WorkStreamCard({
 }: {
   ws: WorkStreamWithStages;
   ballGroups: string[];
+  ballGroupAcronymMap: Map<string, string>;
   units: UnitInvolved[];
   onUpdateName: (name: string) => void;
   onUpdateDeveloper: (developer: string | null) => void;
@@ -1077,7 +1081,7 @@ function WorkStreamCard({
                       >
                         <option value="">—</option>
                         {ballGroups.map((g) => (
-                          <option key={g} value={g}>{g}</option>
+                          <option key={g} value={g}>{ballGroupAcronymMap.get(g) || g}</option>
                         ))}
                       </select>
                       <select

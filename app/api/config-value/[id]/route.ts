@@ -38,6 +38,7 @@ export async function PATCH(
     where: { id: configId },
     data: {
       value: body.value !== undefined ? body.value : undefined,
+      acronym: body.acronym !== undefined ? body.acronym : undefined,
       status: body.status !== undefined ? body.status : undefined,
       sortOrder: body.sortOrder !== undefined ? body.sortOrder : undefined,
       archived: body.archived !== undefined ? body.archived : undefined,

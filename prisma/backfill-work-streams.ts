@@ -81,7 +81,7 @@ async function main() {
             data: {
               projectId: project.id,
               name,
-              currentBall: "PMO",
+              currentBall: "Project Management Office",
               flowStages: {
                 create: templateStages.map((stage, i) => ({
                   name: stage.value,
@@ -114,7 +114,7 @@ async function main() {
               projectId: project.id,
               entryType: "bump",
               fieldName: "status",
-              newValue: "PMO",
+              newValue: "Project Management Office",
               note: "Not Started",
               changedBy: "System",
             },

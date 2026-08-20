@@ -120,14 +120,19 @@ async function main() {
   }
   console.log("Seeded initiated_by values");
 
-  const ballGroups = ["PMO", "Developers", "System Owner"];
+  const ballGroups = [
+    { value: "Project Management Office", acronym: "PMO" },
+    { value: "Developers", acronym: "DEV" },
+    { value: "Business Unit", acronym: "BU" },
+  ];
   for (let i = 0; i < ballGroups.length; i++) {
+    const { value, acronym } = ballGroups[i];
     const existing = await prisma.configValue.findFirst({
-      where: { category: "ball_groups", value: ballGroups[i] },
+      where: { category: "ball_groups", value },
     });
     if (!existing) {
       await prisma.configValue.create({
-        data: { category: "ball_groups", value: ballGroups[i], sortOrder: i },
+        data: { category: "ball_groups", value, acronym, sortOrder: i },
       });
     }
   }

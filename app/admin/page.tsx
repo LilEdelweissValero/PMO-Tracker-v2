@@ -27,6 +27,7 @@ interface ConfigItem {
   id: number;
   category: string;
   value: string;
+  acronym: string | null;
   status: string | null;
   sortOrder: number;
 }
@@ -40,6 +41,7 @@ const adminColumns = [
 
 const adminAccessors: Record<string, SortAccessor<ConfigItem>> = {
   value: (c) => c.value,
+  acronym: (c) => c.acronym ?? "",
 };
 
 export default function AdminPage() {
@@ -49,6 +51,8 @@ export default function AdminPage() {
   const [newValue, setNewValue] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editAcronym, setEditAcronym] = useState("");
+  const [newAcronym, setNewAcronym] = useState("");
   const fetched = useRef(false);
 
   const categories = [
@@ -86,6 +90,7 @@ export default function AdminPage() {
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const isStageTemplate = activeCategory === "flow_template";
+  const isBallGroups = activeCategory === "ball_groups";
   const valueLabel = isStageTemplate ? "Stage" : "Value";
   const addLabel = isStageTemplate
     ? "Add New Stage"
@@ -95,6 +100,7 @@ export default function AdminPage() {
   const tableColumns: { key: string; label: string; sortable?: boolean }[] = [
     ...adminColumns.slice(0, 2),
     { key: "value", label: valueLabel },
+    ...(isBallGroups ? [{ key: "acronym", label: "Acronym" }] : []),
     ...(isStageTemplate ? [{ key: "status", label: "Project Status", sortable: false }] : []),
     { key: "actions", label: "Actions", sortable: false },
   ];
@@ -127,10 +133,12 @@ export default function AdminPage() {
       body: JSON.stringify({
         category: activeCategory,
         value: newValue.trim(),
+        acronym: isBallGroups ? newAcronym.trim() || null : null,
         sortOrder: filtered.length,
       }),
     });
     setNewValue("");
+    setNewAcronym("");
     refetch();
     playPing();
     showToast("Value added");
@@ -140,7 +148,7 @@ export default function AdminPage() {
     await fetch(`/api/config-value/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value: editValue }),
+      body: JSON.stringify({ value: editValue, acronym: isBallGroups ? editAcronym.trim() || null : undefined }),
     });
     setEditingId(null);
     refetch();
@@ -246,7 +254,7 @@ export default function AdminPage() {
             { from: "Initiated By", to: "Project Forms", desc: "Values appear as dropdown options when creating or editing projects." },
           ],
           ball_groups: [
-            { from: "Ball Groups", to: "Bump Modal, Ball View", desc: "Group names appear in bump dialogs and ball view grouping." },
+            { from: "Ball Groups", to: "Bump Modal, Ball View", desc: "Group names appear in bump dialogs and ball view grouping. Acronyms are used for concise display in dashboard tables and stage views." },
           ],
           requested_by_name: [
             { from: "Requested By Name", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
@@ -307,6 +315,24 @@ export default function AdminPage() {
               outline: "none",
             }}
           />
+          {isBallGroups && (
+            <input
+              type="text"
+              value={newAcronym}
+              onChange={(e) => setNewAcronym(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addItem(); }}
+              placeholder="Acronym..."
+              style={{
+                width: "100px",
+                padding: "6px 10px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+                outline: "none",
+              }}
+            />
+          )}
           <button
             onClick={addItem}
             disabled={!newValue.trim()}
@@ -383,6 +409,21 @@ export default function AdminPage() {
                             item.value
                           )}
                         </td>
+                        {isBallGroups && (
+                          <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                            {editingId === item.id ? (
+                              <input
+                                type="text"
+                                value={editAcronym}
+                                onChange={(e) => setEditAcronym(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") updateItem(item.id); }}
+                                style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "60px" }}
+                              />
+                            ) : (
+                              item.acronym || "—"
+                            )}
+                          </td>
+                        )}
                         <td style={{ padding: "8px 10px" }}>
                           {isStageTemplate && (
                             <select
@@ -413,7 +454,7 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button onClick={() => { setEditingId(item.id); setEditValue(item.value); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
+                              <button onClick={() => { setEditingId(item.id); setEditValue(item.value); setEditAcronym(item.acronym ?? ""); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
                               <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}>Delete</button>
                             </div>
                           )}
