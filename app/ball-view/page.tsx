@@ -16,7 +16,7 @@ const ballColumns = [
 ];
 
 const ballAccessors: Record<string, SortAccessor<LatestEntry>> = {
-  project: (e) => e.projectName,
+  project: (e) => e.projectCode,
   workStream: (e) => e.workStreamName,
   task: (e) => e.currentStage,
   duration: (e) => e.durationMs ?? 0,
@@ -62,20 +62,20 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
                 >
-                  <td style={{ padding: "8px 10px" }}>
+                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                     <Link href={`/projects/${entry.projectId}`} style={{ color: "var(--accent)", textDecoration: "none" }}>
-                      {entry.projectName}
+                      {entry.projectCode || entry.projectName}
                     </Link>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.workStreamName || "—"}</td>
-                  <td style={{ padding: "8px 10px" }}>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>{entry.workStreamName || "—"}</td>
+                  <td style={{ padding: "8px 10px", width: "100%" }}>
                     <div style={{ fontWeight: 500 }}>{entry.currentStage || "—"}</div>
                     <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--ink-tertiary)" }}>
                       <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "var(--ink-tertiary)", flexShrink: 0 }} />
                       {entry.ballPerson || "—"}
                     </div>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                     {entry.duration || "—"}
                   </td>
                 </tr>
