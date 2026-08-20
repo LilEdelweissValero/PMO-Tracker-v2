@@ -93,6 +93,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
   const [ballPerson, setBallPerson] = useState("");
   const [hasProgress, setHasProgress] = useState(false);
   const [progressStageId, setProgressStageId] = useState<number | null>(null);
+  const [newTaskName, setNewTaskName] = useState("");
   const [saving, setSaving] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -149,6 +150,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
         setTaskDone(false);
         setHasProgress(false);
         setProgressStageId(null);
+        setNewTaskName("");
         setBumpDate(toLocalDateTimeInput(new Date()));
         setBumpMsg("");
         setSaving(false);
@@ -162,6 +164,15 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
   const activeWs = workStreams.find((w) => w.id === selectedWsIds[0]) ?? null;
   const activeStageName = activeWs?.currentStage?.name ?? "Not Started";
+
+  const holderLabel = (() => {
+    const stage = activeWs?.currentStage;
+    if (stage?.responsibleGroup && stage?.responsiblePerson) {
+      return `${stage.responsibleGroup} - ${stage.responsiblePerson}`;
+    }
+    if (stage?.responsibleGroup) return stage.responsibleGroup;
+    return activeWs?.currentBall || "—";
+  })();
 
   const pendingStages = activeWs
     ? [...activeWs.flowStages]
@@ -241,7 +252,43 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             });
           }
           const curStage = ws.currentStage;
-          if (curStage) {
+
+          if (newTaskName.trim() && curStage) {
+            await fetch(`/api/flow-stage/${curStage.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ actualDate: isoDate }),
+            });
+
+            const createRes = await fetch("/api/flow-stage", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                workStreamId: ws.id,
+                name: newTaskName.trim(),
+                responsibleGroup: ballGroup,
+                responsiblePerson: ballPerson || null,
+              }),
+            });
+            const createdStage = await createRes.json();
+
+            const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
+            const completed = [...sorted.filter((s) => s.actualDate), curStage];
+            const pending = [createdStage, ...sorted.filter((s) => !s.actualDate && s.id !== curStage.id)];
+            const newOrder = [...completed, ...pending];
+            const idxMap = new Map(newOrder.map((s, i) => [s.id, i]));
+            await Promise.all(
+              newOrder
+                .filter((s) => s.orderIdx !== idxMap.get(s.id))
+                .map((s) =>
+                  fetch(`/api/flow-stage/${s.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderIdx: idxMap.get(s.id) }),
+                  })
+                )
+            );
+          } else if (curStage) {
             await fetch(`/api/flow-stage/${curStage.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
@@ -375,7 +422,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               <span style={{ color: "var(--ink-tertiary)", fontWeight: 600, textTransform: "uppercase", fontSize: "10px", letterSpacing: "0.08em" }}>
                 Current Holder:{" "}
               </span>
-              <span style={{ fontWeight: 600 }}>{activeWs?.currentBall || "—"}</span>
+              <span style={{ fontWeight: 600 }}>{holderLabel}</span>
             </div>
             <div>
               <span style={{ color: "var(--ink-tertiary)", fontWeight: 600, textTransform: "uppercase", fontSize: "10px", letterSpacing: "0.08em" }}>
@@ -463,6 +510,27 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
                       ))}
                     </select>
                   </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                    New Task
+                  </label>
+                  <input
+                    type="text"
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    placeholder="Enter new task name..."
+                    style={{
+                      padding: "6px 10px",
+                      border: "1px solid var(--rule)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "13px",
+                      fontFamily: "var(--font-sans)",
+                      outline: "none",
+                      backgroundColor: "var(--surface)",
+                      color: "var(--ink-primary)",
+                    }}
+                  />
                 </div>
               </div>
             )}
