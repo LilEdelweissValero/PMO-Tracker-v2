@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildStagesWithDerived, computeCurrentStage } from "@/lib/feature";
+import { buildStagesWithDerived, computeCurrentStage, computeTemplateCurrentStage } from "@/lib/feature";
+import type { TemplateStage } from "@/lib/feature";
 import { formatDuration } from "@/lib/duration";
 
 interface WorkStreamEnrich {
@@ -78,6 +79,12 @@ export async function GET(request: NextRequest) {
       .map((g) => [g.value.toLowerCase(), g.acronym!])
   );
 
+  const flowTemplateRows = await prisma.configValue.findMany({
+    where: { category: "flow_template", archived: false },
+    orderBy: { sortOrder: "asc" },
+  });
+  const templateStages: TemplateStage[] = flowTemplateRows.map((r) => ({ name: r.value, status: r.status }));
+
   const getLatestPerWorkStream = (logs: typeof progressLogs) => {
     const seen = new Set<number>();
     return logs.filter((log) => {
@@ -126,13 +133,14 @@ export async function GET(request: NextRequest) {
       .map((log) => {
         const ws = wsMap.get(log.workStreamId!) as WorkStreamEnrich | undefined;
         const stages = ws ? buildStagesWithDerived(ws.flowStages) : [];
-        const currentStage = computeCurrentStage(stages);
+        const lastCompletedStage = computeCurrentStage(stages);
+        const displayStage = computeTemplateCurrentStage(stages, templateStages);
 
         const ballGroup = kind === "bump" ? log.newValue || ws?.currentBall || null : ws?.currentBall ?? null;
         const anchor =
           kind === "bump"
             ? (log.bumpDate ?? log.changedAt).getTime()
-            : currentStage?.actualDate?.getTime() ?? null;
+            : lastCompletedStage?.actualDate?.getTime() ?? null;
         const durationMs = anchor === null ? null : Math.max(0, reference.getTime() - anchor);
 
         return {
@@ -140,7 +148,7 @@ export async function GET(request: NextRequest) {
           workStreamName: ws?.name ?? null,
           projectName: ws?.project.name ?? "Unknown",
           projectCode: ws?.project.projectId ?? null,
-          currentStage: currentStage?.name ?? "Not Started",
+          currentStage: displayStage?.name ?? "—",
           currentBall: ws?.currentBall ?? null,
           ballHolder: ws ? formatBallHolder(ballGroup, ws, acronymMap) : null,
           ballPerson: ws ? extractBallPerson(ballGroup, ws) : null,

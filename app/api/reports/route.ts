@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { buildWorkStreamWithDerived } from "@/lib/feature";
+import type { TemplateStage } from "@/lib/feature";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -34,6 +35,12 @@ export async function GET(request: NextRequest) {
     },
     orderBy: { sortOrder: "asc" },
   });
+
+  const flowTemplateRows = await prisma.configValue.findMany({
+    where: { category: "flow_template", archived: false },
+    orderBy: { sortOrder: "asc" },
+  });
+  const templateStages: TemplateStage[] = flowTemplateRows.map((r) => ({ name: r.value, status: r.status }));
 
   const projectStates = new Map<number, Record<string, string>>();
   const wsStates = new Map<number, Record<string, string>>();
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
         assignedDeveloper: wsState.assignedDeveloper ?? ws.assignedDeveloper,
         currentBall: wsState.currentBall ?? ws.currentBall,
         flowStages: stages,
-      });
+      }, templateStages);
     });
 
     return {

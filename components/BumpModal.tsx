@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Modal from "@/components/Modal";
 import DatePicker from "@/components/DatePicker";
 import { buildWorkStreamWithDerived } from "@/lib/feature";
+import type { TemplateStage } from "@/lib/feature";
 import { formatDuration } from "@/lib/duration";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
@@ -113,9 +114,15 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
       fetch("/api/unit-involved")
         .then((r) => r.json())
         .catch(() => []),
+      fetch("/api/config-value?category=flow_template")
+        .then((r) => r.json())
+        .catch(() => []),
     ])
-      .then(([data, ballData, unitData]) => {
+      .then(([data, ballData, unitData, flowData]) => {
         if (cancelled) return;
+        const tplStages: TemplateStage[] = (flowData as { value: string; status: string | null; sortOrder: number }[])
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((c) => ({ name: c.value, status: c.status }));
         const enriched = {
           ...data,
           workStreams: data.workStreams.map((ws: Record<string, unknown> & { flowStages: unknown[] }) =>
@@ -126,7 +133,9 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
                 plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
                 actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
               })),
-            } as Parameters<typeof buildWorkStreamWithDerived>[0])
+            } as Parameters<typeof buildWorkStreamWithDerived>[0],
+              tplStages
+            )
           ),
         };
         const streams = enriched.workStreams as WorkStreamWithStages[];
@@ -163,7 +172,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
   }, [open, projectId]);
 
   const activeWs = workStreams.find((w) => w.id === selectedWsIds[0]) ?? null;
-  const activeStageName = activeWs?.currentStage?.name ?? "Not Started";
+  const activeStageName = activeWs?.currentStage?.name ?? "—";
 
   const holderLabel = (() => {
     const stage = activeWs?.currentStage;
@@ -215,7 +224,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
   };
 
   const canSelect = (ws: WorkStreamWithStages) =>
-    !activeWs || (ws.currentStage?.name ?? "Not Started") === activeStageName;
+    !activeWs || (ws.currentStage?.name ?? "—") === activeStageName;
 
   const logBump = async () => {
     if (!activeWs || !bumpMsg.trim() || saving) return;
@@ -236,7 +245,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             workStreamId: ws.id,
             projectId,
             entryType: "bump",
-            fieldName: ws.currentStage?.name ?? "Not Started",
+            fieldName: ws.currentStage?.name ?? "—",
             newValue: holder,
             note: bumpMsg,
             bumpDate: isoDate,
@@ -362,7 +371,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               {workStreams.map((ws) => {
                 const enabled = canSelect(ws);
                 const checked = selectedWsIds.includes(ws.id);
-                const stageName = ws.currentStage?.name ?? "Not Started";
+                const stageName = ws.currentStage?.name ?? "—";
                 return (
                   <label
                     key={ws.id}

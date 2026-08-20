@@ -25,6 +25,8 @@ async function main() {
     console.warn("No flow_template config values found; skipping stage creation.");
   }
 
+  const initialStatus = templateStages[0]?.status ?? "Not Yet Started";
+
   const projects = await prisma.project.findMany({
     where: { archived: false },
     include: {
@@ -105,8 +107,8 @@ async function main() {
               projectId: project.id,
               entryType: "progress",
               fieldName: "status",
-              newValue: "Not Started",
-              note: "Not Started",
+              newValue: initialStatus,
+              note: initialStatus,
               changedBy: "System",
             },
             {
@@ -115,7 +117,7 @@ async function main() {
               entryType: "bump",
               fieldName: "status",
               newValue: "Project Management Office",
-              note: "Not Started",
+              note: initialStatus,
               changedBy: "System",
             },
           ],

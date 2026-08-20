@@ -22,26 +22,17 @@ export function computeCurrentStage(
   return dated[0] ?? null;
 }
 
-export function computeHealth(
-  stage: FlowStageWithDerived | null
-): "completed" | "ontime" | "atrisk" | "delayed" | "notdue" {
-  if (!stage) return "notdue";
-  if (stage.name.toLowerCase().includes("closed") && stage.actualDate) return "completed";
-  if (stage.delayAdvanceDays === null) return "notdue";
-  if (stage.delayAdvanceDays <= 0) return "ontime";
-  if (stage.delayAdvanceDays <= 7) return "atrisk";
-  return "delayed";
-}
-
-export function getHealthLabel(health: string): string {
-  const labels: Record<string, string> = {
-    completed: "Completed",
-    ontime: "On Time",
-    atrisk: "At Risk",
-    delayed: "Delayed",
-    notdue: "Not Yet Due",
-  };
-  return labels[health] ?? health;
+export function computeTemplateCurrentStage(
+  stages: FlowStageWithDerived[],
+  templateStages: TemplateStage[]
+): FlowStageWithDerived | null {
+  if (templateStages.length === 0) return computeCurrentStage(stages);
+  const byName = new Map(stages.map((s) => [s.name, s]));
+  for (const tpl of templateStages) {
+    const stage = byName.get(tpl.name);
+    if (!stage || !stage.actualDate) return stage ?? null;
+  }
+  return computeCurrentStage(stages);
 }
 
 export interface TemplateStage {
@@ -100,17 +91,6 @@ export function getStatusColorClass(status: string, allStatuses?: { value: strin
   return fallbackMap[status] ?? { bg: "var(--status-nys-bg)", ink: "var(--status-nys-ink)" };
 }
 
-export function getHealthColorClass(health: string): { bg: string; ink: string } {
-  const map: Record<string, { bg: string; ink: string }> = {
-    completed: { bg: "var(--health-completed-bg)", ink: "var(--health-completed-ink)" },
-    ontime: { bg: "var(--health-ontime-bg)", ink: "var(--health-ontime-ink)" },
-    atrisk: { bg: "var(--health-atrisk-bg)", ink: "var(--health-atrisk-ink)" },
-    delayed: { bg: "var(--health-delayed-bg)", ink: "var(--health-delayed-ink)" },
-    notdue: { bg: "var(--health-notdue-bg)", ink: "var(--health-notdue-ink)" },
-  };
-  return map[health] ?? { bg: "var(--health-notdue-bg)", ink: "var(--health-notdue-ink)" };
-}
-
 export function buildStagesWithDerived(
   stages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[]
 ): FlowStageWithDerived[] {
@@ -134,8 +114,9 @@ export function buildWorkStreamWithDerived(
     createdAt: Date;
     updatedAt: Date;
     flowStages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[];
-  }
+  },
+  templateStages: TemplateStage[]
 ): WorkStreamWithStages {
   const stages = buildStagesWithDerived(ws.flowStages);
-  return { ...ws, flowStages: stages, currentStage: computeCurrentStage(stages) };
+  return { ...ws, flowStages: stages, currentStage: computeTemplateCurrentStage(stages, templateStages) };
 }

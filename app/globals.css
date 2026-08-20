@@ -28,16 +28,9 @@
   --status-complete-bg: #E6F4EE;
   --status-complete-ink: #1A6B3C;
 
-  --health-completed-bg: #E6F4EE;
-  --health-completed-ink: #1A6B3C;
-  --health-ontime-bg: #E6F4EE;
   --health-ontime-ink: #1A6B3C;
   --health-atrisk-bg: #FFF0EE;
   --health-atrisk-ink: #B91C1C;
-  --health-delayed-bg: #EAF1FE;
-  --health-delayed-ink: #1D4BAA;
-  --health-notdue-bg: #F1F3F6;
-  --health-notdue-ink: #5A6478;
 
   --space-xs: 4px;
   --space-sm: 8px;

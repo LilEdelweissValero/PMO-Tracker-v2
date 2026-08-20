@@ -24,16 +24,9 @@ colors:
   status-mostly-ink: "#0A5FA8"
   status-complete-bg: "#E6F4EE"
   status-complete-ink: "#1A6B3C"
-  health-completed-bg: "#E6F4EE"
-  health-completed-ink: "#1A6B3C"
-  health-ontime-bg: "#E6F4EE"
   health-ontime-ink: "#1A6B3C"
   health-atrisk-bg: "#FFF0EE"
   health-atrisk-ink: "#B91C1C"
-  health-delayed-bg: "#EAF1FE"
-  health-delayed-ink: "#1D4BAA"
-  health-notdue-bg: "#F1F3F6"
-  health-notdue-ink: "#5A6478"
 typography:
   display:
     fontFamily: "Geist, Inter, system-ui, sans-serif"
@@ -87,11 +80,6 @@ components:
   button-primary-hover:
     backgroundColor: "{colors.accent-hover}"
     textColor: "#FFFFFF"
-  health-badge:
-    backgroundColor: "{colors.status-complete-bg}"
-    textColor: "{colors.status-complete-ink}"
-    rounded: "{rounded.sm}"
-    padding: "2px 7px"
 ---
 
 # Design System: ITSD Project Tracker
@@ -135,13 +123,6 @@ Five status colors mapped to project delivery states. Each has a background tint
 - **Partial Progress** (#FFF3E0 / #8B5200): In progress, partial completion.
 - **Mostly Done** (#E8F4FF / #0A5FA8): In progress, near completion.
 - **Complete** (#E6F4EE / #1A6B3C): Finished and verified.
-
-### Health (Semantic)
-Five health states for project risk assessment. Overlaps with status palette for visual consistency.
-- **Completed / On Time** (#E6F4EE / #1A6B3C): Green family — healthy.
-- **At Risk** (#FFF0EE / #B91C1C): Red family — needs attention.
-- **Delayed** (#EAF1FE / #1D4BAA): Blue family — schedule slip.
-- **Not Yet Due** (#F1F3F6 / #5A6478): Neutral — no action needed.
 
 ### Named Rules
 **The Accent Restraint Rule.** Institutional Blue appears on ≤15% of any given viewport. It marks interactive state only — links, focus rings, selected filters, primary buttons. Never use it for decorative purposes or section backgrounds.
@@ -228,12 +209,6 @@ Components are tactile and precise — crisp borders, tight padding, functional 
 - **Header:** Bottom border, flex space-between, 16px padding
 - **Body:** Scrollable content area, 24px padding
 - **Close:** × character, gray hover state
-
-### HealthBadge
-- **Shape:** 2px radius, inline-flex container
-- **Structure:** 6px status dot (circle) + label text
-- **States:** Completed (green), On Time (green), At Risk (red), Delayed (blue), Not Yet Due (gray)
-- **Typography:** 11px, 600 weight, 0.03em letter-spacing
 
 ### TableHeader
 - **Dual-zone:** Identity zone (ink-primary bg, white text) + Metric zone (ground-metric bg, dark text)

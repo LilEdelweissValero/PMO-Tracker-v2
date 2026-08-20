@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
-    "backfill:work-streams": "tsx prisma/backfill-work-streams.ts"
+    "backfill:work-streams": "tsx prisma/backfill-work-streams.ts",
+    "backfill:initial-status": "tsx prisma/backfill-initial-status.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

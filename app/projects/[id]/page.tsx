@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DetailHero from "@/components/DetailHero";
-import HealthBadge from "@/components/HealthBadge";
 import DatePicker from "@/components/DatePicker";
 import LinkEditor from "@/components/LinkEditor";
 import Modal from "@/components/Modal";
 import EntityFormModal from "@/components/EntityFormModal";
 import BumpModal from "@/components/BumpModal";
-import { computeProjectStatus, computeHealth, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
+import { computeProjectStatus, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
+import type { TemplateStage } from "@/lib/feature";
 import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
@@ -82,7 +82,7 @@ export default function ProjectDetailPage() {
                   plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
                   actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
                 })),
-              } as Parameters<typeof buildWorkStreamWithDerived>[0])
+              } as Parameters<typeof buildWorkStreamWithDerived>[0], templateStages)
             ),
           };
           const searchParams =
@@ -104,7 +104,7 @@ export default function ProjectDetailPage() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [projectId]);
+  }, [projectId, templateStages]);
 
   const refetch = () => {
     fetch(`/api/project/${projectId}`)
@@ -120,7 +120,7 @@ export default function ProjectDetailPage() {
                 plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
                 actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
               })),
-            } as Parameters<typeof buildWorkStreamWithDerived>[0])
+            } as Parameters<typeof buildWorkStreamWithDerived>[0], templateStages)
           ),
         };
         setProject(enriched);
@@ -393,6 +393,8 @@ export default function ProjectDetailPage() {
             ballGroups={ballGroups}
             ballGroupAcronymMap={ballGroupAcronymMap}
             units={units}
+            templateStages={templateStages}
+            projectStatuses={projectStatuses}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
             onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
             onUpdateBall={(ball) => updateWorkStream(ws.id, { currentBall: ball })}
@@ -761,6 +763,8 @@ function WorkStreamCard({
   ballGroups,
   ballGroupAcronymMap,
   units,
+  templateStages,
+  projectStatuses,
   onUpdateName,
   onUpdateDeveloper,
   onUpdateBall,
@@ -775,6 +779,8 @@ function WorkStreamCard({
   ballGroups: string[];
   ballGroupAcronymMap: Map<string, string>;
   units: UnitInvolved[];
+  templateStages: TemplateStage[];
+  projectStatuses: { value: string }[];
   onUpdateName: (name: string) => void;
   onUpdateDeveloper: (developer: string | null) => void;
   onUpdateBall: (ball: string) => void;
@@ -785,7 +791,8 @@ function WorkStreamCard({
   onBump: () => void;
   onOpenBumps: () => void;
 }) {
-  const health = computeHealth(ws.currentStage);
+  const stageStatus = templateStages.find((t) => t.name === ws.currentStage?.name)?.status ?? "";
+  const stageColors = getStatusColorClass(stageStatus, projectStatuses);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(ws.name ?? "");
   const [nameHovered, setNameHovered] = useState(false);
@@ -873,7 +880,32 @@ function WorkStreamCard({
               </button>
             </span>
           )}
-          <HealthBadge health={health} />
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              padding: "2px 7px",
+              borderRadius: "var(--radius-sm)",
+              backgroundColor: stageColors.bg,
+              color: stageColors.ink,
+              fontSize: "11px",
+              fontWeight: 600,
+              letterSpacing: "0.03em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: stageColors.ink,
+                flexShrink: 0,
+              }}
+            />
+            {stageStatus || "—"}
+          </span>
         </div>
         <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center", flexWrap: "wrap" }}>
           <select
