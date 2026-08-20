@@ -62,12 +62,12 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
                 >
-                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "8px 10px" }}>
                     <Link href={`/projects/${entry.projectId}`} style={{ color: "var(--accent)", textDecoration: "none" }}>
                       {entry.projectCode || entry.projectName}
                     </Link>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>{entry.workStreamName || "—"}</td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.workStreamName || "—"}</td>
                   <td style={{ padding: "8px 10px", width: "100%" }}>
                     <div style={{ fontWeight: 500 }}>{entry.currentStage || "—"}</div>
                     <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--ink-tertiary)" }}>
@@ -75,7 +75,7 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                       {entry.ballPerson || "—"}
                     </div>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
                     {entry.duration || "—"}
                   </td>
                 </tr>
