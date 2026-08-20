@@ -227,44 +227,66 @@ export default function AdminPage() {
         ))}
       </div>
 
-      <div
-        style={{
-          backgroundColor: "var(--ground-metric)",
-          border: "1px solid var(--rule)",
-          borderRadius: "var(--radius-lg)",
-          padding: "var(--space-md)",
-          marginBottom: "var(--space-md)",
-          fontSize: "12px",
-          lineHeight: 1.6,
-          color: "var(--ink-secondary)",
-        }}
-      >
-        <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>
-          Connected Fields
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--space-sm) var(--space-lg)" }}>
-          <div>
-            <strong style={{ color: "var(--ink-primary)" }}>Status</strong> &larr;&rarr; <strong style={{ color: "var(--ink-primary)" }}>Default Stage Template</strong>
-            <div>Renaming a status automatically updates all stage templates referencing it.</div>
+      {(() => {
+        const connections: Record<string, { from: string; to: string; desc: string }[]> = {
+          flow_template: [
+            { from: "Status", to: "Default Stage Template", desc: "Renaming a status automatically updates all stage templates referencing it." },
+          ],
+          project_status: [
+            { from: "Status", to: "Default Stage Template", desc: "Renaming a status automatically updates all stage templates referencing it." },
+            { from: "Status", to: "Project Cards", desc: "Project status is computed from stage template progress. Renaming changes labels across the app." },
+          ],
+          priority: [
+            { from: "Priority", to: "Project Forms", desc: "Values appear as dropdown options when creating or editing projects." },
+          ],
+          request_type: [
+            { from: "Request Type", to: "Project Forms", desc: "Values appear as dropdown options when creating or editing projects." },
+          ],
+          initiated_by: [
+            { from: "Initiated By", to: "Project Forms", desc: "Values appear as dropdown options when creating or editing projects." },
+          ],
+          ball_groups: [
+            { from: "Ball Groups", to: "Bump Modal, Ball View", desc: "Group names appear in bump dialogs and ball view grouping." },
+          ],
+          requested_by_name: [
+            { from: "Requested By Name", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
+          ],
+          requested_by_dept: [
+            { from: "Requested By Dept", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
+          ],
+          pm_officer: [
+            { from: "PM Officer", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
+          ],
+        };
+        const items = connections[activeCategory] ?? [];
+        if (items.length === 0) return null;
+        return (
+          <div
+            style={{
+              backgroundColor: "var(--ground-metric)",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-md)",
+              marginBottom: "var(--space-md)",
+              fontSize: "12px",
+              lineHeight: 1.6,
+              color: "var(--ink-secondary)",
+            }}
+          >
+            <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>
+              Connected Fields
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--space-sm) var(--space-lg)" }}>
+              {items.map((item, i) => (
+                <div key={i}>
+                  <strong style={{ color: "var(--ink-primary)" }}>{item.from}</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>{item.to}</strong>
+                  <div>{item.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            <strong style={{ color: "var(--ink-primary)" }}>Status</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Cards</strong> (runtime)
-            <div>Project status is computed from stage template progress. Renaming changes labels across the app.</div>
-          </div>
-          <div>
-            <strong style={{ color: "var(--ink-primary)" }}>Ball Groups</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Bump Modal, Ball View</strong>
-            <div>Group names appear in bump dialogs and ball view grouping.</div>
-          </div>
-          <div>
-            <strong style={{ color: "var(--ink-primary)" }}>Priority, Request Type, Initiated By</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Forms</strong>
-            <div>Values appear as dropdown options when creating or editing projects.</div>
-          </div>
-          <div>
-            <strong style={{ color: "var(--ink-primary)" }}>Requested By Name, Dept, PM Officer</strong> &rarr; <strong style={{ color: "var(--ink-primary)" }}>Project Forms</strong>
-            <div>Autocomplete options. New values are added on-the-fly when typed in project forms.</div>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
         <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>{addLabel}</div>
