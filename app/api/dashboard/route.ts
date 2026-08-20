@@ -28,13 +28,21 @@ interface WorkStreamEnrich {
   };
 }
 
+function extractBallPerson(ballGroup: string | null, ws: WorkStreamEnrich): string | null {
+  const group = ballGroup?.trim() || "Project Management Office";
+  const dashIdx = group.indexOf(" - ");
+  if (dashIdx > -1) return group.slice(dashIdx + 3).trim() || null;
+  const normalized = group.toLowerCase();
+  if (normalized === "project management office") return ws.project.pmOfficer;
+  if (normalized === "developers") return ws.assignedDeveloper;
+  if (normalized === "business unit") return ws.project.systemOwnerName;
+  return null;
+}
+
 function formatBallHolder(ballGroup: string | null, ws: WorkStreamEnrich, acronymMap: Map<string, string>): string {
   const group = ballGroup?.trim() || "Project Management Office";
   const normalized = group.toLowerCase();
-  let person: string | null = null;
-  if (normalized === "project management office") person = ws.project.pmOfficer;
-  else if (normalized === "developers") person = ws.assignedDeveloper;
-  else if (normalized === "business unit") person = ws.project.systemOwnerName;
+  const person = extractBallPerson(ballGroup, ws);
   const label = acronymMap.get(normalized) || group;
   return person ? `${label} - ${person}` : label;
 }
@@ -135,6 +143,7 @@ export async function GET(request: NextRequest) {
           currentStage: currentStage?.name ?? "Not Started",
           currentBall: ws?.currentBall ?? null,
           ballHolder: ws ? formatBallHolder(ballGroup, ws, acronymMap) : null,
+          ballPerson: ws ? extractBallPerson(ballGroup, ws) : null,
           durationMs,
           duration: formatDuration(durationMs),
         };

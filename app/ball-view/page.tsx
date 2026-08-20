@@ -10,16 +10,16 @@ const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Busine
 
 const ballColumns = [
   { key: "project", label: "Project" },
-  { key: "initiatedBy", label: "Initiated By" },
-  { key: "latestProgress", label: "Latest Progress" },
-  { key: "latestBump", label: "Latest Bump" },
+  { key: "workStream", label: "Work Stream" },
+  { key: "task", label: "Task" },
+  { key: "duration", label: "Duration" },
 ];
 
 const ballAccessors: Record<string, SortAccessor<LatestEntry>> = {
   project: (e) => e.projectName,
-  initiatedBy: (e) => e.currentStage,
-  latestProgress: (e) => e.note,
-  latestBump: (e) => e.changedBy,
+  workStream: (e) => e.workStreamName,
+  task: (e) => e.currentStage,
+  duration: (e) => e.durationMs ?? 0,
 };
 
 function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }) {
@@ -67,9 +67,17 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                       {entry.projectName}
                     </Link>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.currentStage || "—"}</td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.note || "—"}</td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.changedBy || "—"}</td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.workStreamName || "—"}</td>
+                  <td style={{ padding: "8px 10px" }}>
+                    <div style={{ fontWeight: 500 }}>{entry.currentStage || "—"}</div>
+                    <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--ink-tertiary)" }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "var(--ink-tertiary)", flexShrink: 0 }} />
+                      {entry.ballPerson || "—"}
+                    </div>
+                  </td>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                    {entry.duration || "—"}
+                  </td>
                 </tr>
               ))
             )}

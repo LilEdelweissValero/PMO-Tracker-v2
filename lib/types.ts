@@ -190,6 +190,7 @@ export interface LatestEntry {
   currentStage: string | null;
   currentBall: string | null;
   ballHolder: string | null;
+  ballPerson: string | null;
   durationMs: number | null;
   duration: string | null;
 }
