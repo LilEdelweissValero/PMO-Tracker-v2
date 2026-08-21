@@ -22,14 +22,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const wasCompleted = existing.actualDate !== null;
+  const wasCompleted = existing.completionDate !== null;
 
   const plannedDate = body.plannedDate !== undefined
     ? (body.plannedDate ? new Date(body.plannedDate) : null)
     : existing.plannedDate;
-  const actualDate = body.actualDate !== undefined
-    ? (body.actualDate ? new Date(body.actualDate) : null)
-    : existing.actualDate;
+  const completionDate = body.completionDate !== undefined
+    ? (body.completionDate ? new Date(body.completionDate) : null)
+    : existing.completionDate;
 
   const stage = await prisma.flowStage.update({
     where: { id: stageId },
@@ -37,41 +37,41 @@ export async function PATCH(
       name: body.name !== undefined ? body.name : existing.name,
       orderIdx: body.orderIdx !== undefined ? body.orderIdx : existing.orderIdx,
       plannedDate,
-      actualDate,
+      completionDate,
       responsibleGroup: body.responsibleGroup !== undefined ? body.responsibleGroup : existing.responsibleGroup,
       responsiblePerson: body.responsiblePerson !== undefined ? body.responsiblePerson : existing.responsiblePerson,
     },
   });
 
-  if (!wasCompleted && actualDate !== null) {
+  if (!wasCompleted && completionDate !== null) {
     await logChange({
       workStreamId: existing.workStreamId,
       projectId: existing.workStream.projectId,
       entryType: "progress",
-      fieldName: "actual_date",
-      newValue: actualDate.toISOString(),
+      fieldName: "completion_date",
+      newValue: completionDate.toISOString(),
       note: body.note ?? `Stage "${existing.name}" completed`,
       changedBy: body.changedBy ?? "System",
     });
-  } else if (wasCompleted && actualDate === null) {
+  } else if (wasCompleted && completionDate === null) {
     await logChange({
       workStreamId: existing.workStreamId,
       projectId: existing.workStream.projectId,
       entryType: "field_change",
-      fieldName: "actual_date",
-      oldValue: existing.actualDate?.toISOString() ?? "",
+      fieldName: "completion_date",
+      oldValue: existing.completionDate?.toISOString() ?? "",
       newValue: "",
       changedBy: body.changedBy ?? "System",
     });
-  } else if (plannedDate !== existing.plannedDate || actualDate !== existing.actualDate) {
-    const delta = computeDelayAdvance(plannedDate, actualDate);
+  } else if (plannedDate !== existing.plannedDate || completionDate !== existing.completionDate) {
+    const delta = computeDelayAdvance(plannedDate, completionDate);
     await logChange({
       workStreamId: existing.workStreamId,
       projectId: existing.workStream.projectId,
       entryType: "field_change",
       fieldName: "dates",
-      oldValue: `planned=${existing.plannedDate?.toISOString() ?? ""}, actual=${existing.actualDate?.toISOString() ?? ""}`,
-      newValue: `planned=${plannedDate?.toISOString() ?? ""}, actual=${actualDate?.toISOString() ?? ""}${delta !== null ? ` (delta=${delta}d)` : ""}`,
+      oldValue: `planned=${existing.plannedDate?.toISOString() ?? ""}, completion=${existing.completionDate?.toISOString() ?? ""}`,
+      newValue: `planned=${plannedDate?.toISOString() ?? ""}, completion=${completionDate?.toISOString() ?? ""}${delta !== null ? ` (delta=${delta}d)` : ""}`,
       changedBy: body.changedBy ?? "System",
     });
   }

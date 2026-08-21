@@ -83,7 +83,7 @@ model FlowStage {
   name             String
   orderIdx         Int       @map("order_idx")
   plannedDate      DateTime? @map("planned_date")
-  actualDate       DateTime? @map("actual_date")
+  completionDate   DateTime? @map("completion_date")
   responsibleGroup String?   @map("responsible_group")
   responsiblePerson String?  @map("responsible_person")
   archived         Boolean   @default(false)

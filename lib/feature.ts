@@ -13,10 +13,10 @@ export function computeCurrentStage(
   stages: FlowStageWithDerived[]
 ): FlowStageWithDerived | null {
   const dated = stages
-    .filter((s) => s.actualDate !== null)
+    .filter((s) => s.completionDate !== null)
     .sort((a, b) => {
-      const aTime = a.actualDate?.getTime() ?? 0;
-      const bTime = b.actualDate?.getTime() ?? 0;
+      const aTime = a.completionDate?.getTime() ?? 0;
+      const bTime = b.completionDate?.getTime() ?? 0;
       return bTime - aTime;
     });
   return dated[0] ?? null;
@@ -30,7 +30,7 @@ export function computeTemplateCurrentStage(
   const byName = new Map(stages.map((s) => [s.name, s]));
   for (const tpl of templateStages) {
     const stage = byName.get(tpl.name);
-    if (!stage || !stage.actualDate) return stage ?? null;
+    if (!stage || !stage.completionDate) return stage ?? null;
   }
   return computeCurrentStage(stages);
 }
@@ -54,7 +54,7 @@ export function computeProjectStatus(
   for (const ws of workStreams) {
     let lastCompletedIdx = -1;
     for (const stage of ws.flowStages) {
-      if (!stage.actualDate) continue;
+      if (!stage.completionDate) continue;
       const idx = templateIndexByName.get(stage.name);
       if (idx !== undefined && idx > lastCompletedIdx) lastCompletedIdx = idx;
     }
@@ -92,13 +92,13 @@ export function getStatusColorClass(status: string, allStatuses?: { value: strin
 }
 
 export function buildStagesWithDerived(
-  stages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[]
+  stages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; completionDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[]
 ): FlowStageWithDerived[] {
   return stages
     .sort((a, b) => a.orderIdx - b.orderIdx)
     .map((s) => ({
       ...s,
-      delayAdvanceDays: computeDelayAdvance(s.plannedDate, s.actualDate),
+      delayAdvanceDays: computeDelayAdvance(s.plannedDate, s.completionDate),
     }));
 }
 
@@ -114,7 +114,7 @@ export function buildWorkStreamWithDerived(
     sortOrder: number;
     createdAt: Date;
     updatedAt: Date;
-    flowStages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; actualDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[];
+    flowStages: { id: number; workStreamId: number; name: string; orderIdx: number; plannedDate: Date | null; completionDate: Date | null; responsibleGroup: string | null; responsiblePerson: string | null }[];
   },
   templateStages: TemplateStage[]
 ): WorkStreamWithStages {

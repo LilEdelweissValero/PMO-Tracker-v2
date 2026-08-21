@@ -139,7 +139,7 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
                   marginBottom: "6px",
                 }}
               >
-                Project Stage
+                Project Status
               </div>
               <span
                 style={{

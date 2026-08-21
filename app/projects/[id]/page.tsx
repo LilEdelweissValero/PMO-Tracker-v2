@@ -97,7 +97,7 @@ export default function ProjectDetailPage() {
                 flowStages: (ws.flowStages as Record<string, unknown>[]).map((s) => ({
                   ...s,
                   plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
-                  actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
+                  completionDate: s.completionDate ? new Date(s.completionDate as string) : null,
                 })),
               } as Parameters<typeof buildWorkStreamWithDerived>[0], templateStages)
             ),
@@ -135,7 +135,7 @@ export default function ProjectDetailPage() {
               flowStages: (ws.flowStages as Record<string, unknown>[]).map((s) => ({
                 ...s,
                 plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
-                actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
+                completionDate: s.completionDate ? new Date(s.completionDate as string) : null,
               })),
             } as Parameters<typeof buildWorkStreamWithDerived>[0], templateStages)
           ),
@@ -426,7 +426,6 @@ export default function ProjectDetailPage() {
             projectStatuses={projectStatuses}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
             onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
-            onUpdateBall={(ball) => updateWorkStream(ws.id, { currentBall: ball })}
             onUpdateStage={(stageId, data) => updateStage(stageId, data)}
             onReorderStages={(orderedIds) => reorderStages(ws.id, orderedIds)}
             onDeleteStage={deleteStage}
@@ -517,7 +516,9 @@ export default function ProjectDetailPage() {
       />
 
       <Modal open={bumpsWs !== null} onClose={() => setBumpsWs(null)} title={`Bumps — ${bumpsWs?.name ?? ""}`} wide>
-        <div style={{ overflowX: "auto" }}>
+      <div
+        style={{ overflowX: "auto" }}
+      >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
@@ -580,6 +581,7 @@ export default function ProjectDetailPage() {
         fields={[
           { key: "name", label: "Work Stream Name" },
           { key: "assignedDeveloper", label: "Assigned Developer", type: "combo", source: { url: "/api/unit-involved?group=Developers", valueKey: "name" }, strict: true },
+          { key: "currentBall", label: "Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
         ]}
         onSubmit={addWorkStream}
       />
@@ -814,7 +816,6 @@ function WorkStreamCard({
   projectStatuses,
   onUpdateName,
   onUpdateDeveloper,
-  onUpdateBall,
   onUpdateStage,
   onReorderStages,
   onDeleteStage,
@@ -830,7 +831,6 @@ function WorkStreamCard({
   projectStatuses: { value: string }[];
   onUpdateName: (name: string) => void;
   onUpdateDeveloper: (developer: string | null) => void;
-  onUpdateBall: (ball: string) => void;
   onUpdateStage: (stageId: number, data: Record<string, string | number | null>) => void;
   onReorderStages: (orderedIds: number[]) => void;
   onDeleteStage: (stageId: number) => void;
@@ -845,6 +845,7 @@ function WorkStreamCard({
   const [nameHovered, setNameHovered] = useState(false);
   const [renamingStage, setRenamingStage] = useState<number | null>(null);
   const [stageNameValue, setStageNameValue] = useState("");
+  const [stagesTableHovered, setStagesTableHovered] = useState(false);
 
   const sortedStages = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
   const latestBump = ws.latestBump ?? null;
@@ -970,37 +971,19 @@ function WorkStreamCard({
           </span>
         </div>
         <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center", flexWrap: "wrap" }}>
-          <select
-            value={ws.currentBall}
-            onChange={(e) => onUpdateBall(e.target.value)}
+          <span
             style={{
               padding: "4px 8px",
               border: "1px solid var(--rule)",
               borderRadius: "var(--radius-md)",
               fontSize: "12px",
               fontFamily: "var(--font-sans)",
-              outline: "none",
               backgroundColor: "var(--surface)",
+              color: "var(--ink-secondary)",
             }}
           >
-            {ballGroups.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-          <button
-            onClick={onAddStage}
-            style={{
-              padding: "4px 8px",
-              border: "1px solid var(--rule)",
-              borderRadius: "var(--radius-md)",
-              backgroundColor: "var(--surface)",
-              cursor: "pointer",
-              fontSize: "12px",
-              fontFamily: "var(--font-sans)",
-            }}
-          >
-            + Stage
-          </button>
+            {ws.currentBall}
+          </span>
           <button
             onClick={onBump}
             style={{
@@ -1047,11 +1030,16 @@ function WorkStreamCard({
         </div>
       )}
 
-      <div style={{ overflowX: "auto" }}>
+      <div
+        style={{ overflowX: "auto" }}
+        onMouseEnter={() => setStagesTableHovered(true)}
+        onMouseLeave={() => setStagesTableHovered(false)}
+      >
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
           <thead>
             <tr>
-              {["Stage", "Planned", "Actual", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
+              <th style={{ width: "20px", backgroundColor: "var(--ground-metric)", borderBottom: "1px solid var(--rule-strong)" }} />
+              {["Stage", "Planned", "Completion", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -1074,7 +1062,7 @@ function WorkStreamCard({
           <tbody>
             {sortedStages.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                <td colSpan={8} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                   No stages yet
                 </td>
               </tr>
@@ -1086,7 +1074,7 @@ function WorkStreamCard({
                     const showBump = isCurrentStageRow && (bumpMsg || lastBumped);
                     return (
                     <SortableRow key={stage.id} id={String(stage.id)}>
-                      <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
+                      <td style={{ padding: "6px 8px", fontWeight: stage.completionDate ? 600 : 400 }}>
                     {renamingStage === stage.id ? (
                       <input
                         autoFocus
@@ -1132,8 +1120,8 @@ function WorkStreamCard({
                   </td>
                   <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
                     <DatePicker
-                      value={stage.actualDate ? new Date(stage.actualDate).toISOString().split("T")[0] : ""}
-                      onChange={(d) => onUpdateStage(stage.id, { actualDate: d || null })}
+                      value={stage.completionDate ? new Date(stage.completionDate).toISOString().split("T")[0] : ""}
+                      onChange={(d) => onUpdateStage(stage.id, { completionDate: d || null })}
                     />
                   </td>
                   <td style={{ padding: "6px 8px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
@@ -1214,6 +1202,18 @@ function WorkStreamCard({
                   })}
                 </SortableContext>
               </DndContext>
+            )}
+            {stagesTableHovered && (
+              <tr
+                onClick={() => { playPrompt(); onAddStage(); }}
+                style={{ cursor: "pointer" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
+              >
+                <td colSpan={8} style={{ padding: "8px 10px", color: "var(--accent)", fontWeight: 500, fontSize: "12px" }}>
+                  + Add Stage
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

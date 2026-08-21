@@ -246,6 +246,7 @@ export default function ProjectsPage() {
           { key: "systemOwnerName", label: "System Owner Name", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
           { key: "systemOwnerDept", label: "System Owner Dept", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true, strict: true },
+          { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
         ]}
         onSubmit={handleCreate}
       />

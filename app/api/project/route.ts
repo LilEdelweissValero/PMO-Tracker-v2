@@ -203,6 +203,7 @@ export async function POST(request: NextRequest) {
       await createWorkStreamWithStages({
         projectId: project.id,
         name: a.name,
+        currentBall: body.currentBall,
         changedBy: body.changedBy ?? "System",
       });
     }

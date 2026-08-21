@@ -47,7 +47,7 @@ export interface FlowStageUpdate {
   name?: string;
   orderIdx?: number;
   plannedDate?: string | null;
-  actualDate?: string | null;
+  completionDate?: string | null;
   responsibleGroup?: string | null;
   responsiblePerson?: string | null;
 }
@@ -126,7 +126,7 @@ export interface FlowStageWithDerived {
   name: string;
   orderIdx: number;
   plannedDate: Date | null;
-  actualDate: Date | null;
+  completionDate: Date | null;
   responsibleGroup: string | null;
   responsiblePerson: string | null;
   delayAdvanceDays: number | null;

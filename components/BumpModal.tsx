@@ -133,7 +133,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               flowStages: (ws.flowStages as Record<string, unknown>[]).map((s) => ({
                 ...s,
                 plannedDate: s.plannedDate ? new Date(s.plannedDate as string) : null,
-                actualDate: s.actualDate ? new Date(s.actualDate as string) : null,
+                completionDate: s.completionDate ? new Date(s.completionDate as string) : null,
               })),
             } as Parameters<typeof buildWorkStreamWithDerived>[0],
               tplStages
@@ -189,7 +189,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
   const pendingStages = activeWs
     ? [...activeWs.flowStages]
-        .filter((s) => !s.actualDate)
+        .filter((s) => !s.completionDate)
         .sort((a, b) => a.orderIdx - b.orderIdx)
     : [];
 
@@ -281,7 +281,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             await fetch(`/api/flow-stage/${curStage.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ actualDate: isoDate }),
+              body: JSON.stringify({ completionDate: isoDate }),
             });
 
             const createRes = await fetch("/api/flow-stage", {
@@ -297,8 +297,8 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             const createdStage = await createRes.json();
 
             const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
-            const completed = [...sorted.filter((s) => s.actualDate), curStage];
-            const pending = [createdStage, ...sorted.filter((s) => !s.actualDate && s.id !== curStage.id)];
+            const completed = [...sorted.filter((s) => s.completionDate), curStage];
+            const pending = [createdStage, ...sorted.filter((s) => !s.completionDate && s.id !== curStage.id)];
             const newOrder = [...completed, ...pending];
             const idxMap = new Map(newOrder.map((s, i) => [s.id, i]));
             await Promise.all(
@@ -326,14 +326,14 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
         if (chosenStageName) {
           const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
-          const completed = sorted.filter((s) => s.actualDate);
-          const pending = sorted.filter((s) => !s.actualDate);
+          const completed = sorted.filter((s) => s.completionDate);
+          const pending = sorted.filter((s) => !s.completionDate);
           const target = pending.find((s) => s.name === chosenStageName);
           if (target) {
             await fetch(`/api/flow-stage/${target.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ actualDate: isoDate, note: bumpMsg }),
+              body: JSON.stringify({ completionDate: isoDate, note: bumpMsg }),
             });
             const newPending = [target, ...pending.filter((s) => s.id !== target.id)];
             const newOrder = [...completed, ...newPending];

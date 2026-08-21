@@ -9,13 +9,14 @@ interface WorkStreamEnrich {
   currentBall: string | null;
   assignedDeveloper: string | null;
   archived: boolean;
+  createdAt: Date;
   flowStages: {
     id: number;
     workStreamId: number;
     name: string;
     orderIdx: number;
     plannedDate: Date | null;
-    actualDate: Date | null;
+    completionDate: Date | null;
     responsibleGroup: string | null;
     responsiblePerson: string | null;
   }[];
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
         const anchor =
           kind === "bump"
             ? (log.bumpDate ?? log.changedAt).getTime()
-            : lastCompletedStage?.actualDate?.getTime() ?? null;
+            : lastCompletedStage?.completionDate?.getTime() ?? ws?.createdAt.getTime() ?? null;
         const durationMs = anchor === null ? null : Math.max(0, reference.getTime() - anchor);
 
         return {

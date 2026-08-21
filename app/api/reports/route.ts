@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   const projectStates = new Map<number, Record<string, string>>();
   const wsStates = new Map<number, Record<string, string>>();
-  const wsFlowDates = new Map<number, Map<number, { planned: string | null; actual: string | null }>>();
+  const wsFlowDates = new Map<number, Map<number, { planned: string | null; completion: string | null }>>();
 
   for (const log of logs) {
     if (log.projectId && log.fieldName) {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
           const dates = wsFlowDates.get(log.workStreamId)!;
           dates.set(stage.id, {
             planned: stage.plannedDate?.toISOString() ?? null,
-            actual: log.newValue ?? null,
+            completion: log.newValue ?? null,
           });
         }
       }
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         return {
           ...stage,
           plannedDate: fd?.planned ? new Date(fd.planned) : stage.plannedDate,
-          actualDate: fd?.actual ? new Date(fd.actual) : stage.actualDate,
+          completionDate: fd?.completion ? new Date(fd.completion) : stage.completionDate,
         };
       });
 
