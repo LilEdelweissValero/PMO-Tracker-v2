@@ -44,9 +44,8 @@ function extractBallPerson(ballGroup: string | null, ws: WorkStreamEnrich): stri
 function formatBallHolder(ballGroup: string | null, ws: WorkStreamEnrich, acronymMap: Map<string, string>): string {
   const group = ballGroup?.trim() || "Project Management Office";
   const normalized = group.toLowerCase();
-  const person = extractBallPerson(ballGroup, ws);
   const label = acronymMap.get(normalized) || group;
-  return person ? `${label} - ${person}` : label;
+  return label;
 }
 
 export async function GET(request: NextRequest) {

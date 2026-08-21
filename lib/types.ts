@@ -87,6 +87,7 @@ export interface SystemModuleEntry {
   id: number;
   system: string;
   acronym: string | null;
+  color: string | null;
   module: string | null;
   developerAssigned: string | null;
   systemOwnerName: string | null;
@@ -99,6 +100,7 @@ export interface SystemAffected {
   id: number;
   system: string;
   acronym: string | null;
+  color: string | null;
   module: string | null;
   developerAssigned: string | null;
   systemOwnerName: string | null;

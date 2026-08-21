@@ -303,18 +303,20 @@ export default function ProjectDetailPage() {
   ];
 
   const systems = Array.isArray(project.systems) ? project.systems : [];
-  const acronyms = systems.map((s) => s.acronym || s.system);
+  const acronyms = systems.map((s) => ({ label: s.acronym || s.system, color: s.color }));
 
   return (
     <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
-      <DetailHero
-        kicker="Project"
-        title={project.name}
-        meta={metaFields}
-        accentColor={statusColors.bg}
-        acronyms={acronyms}
-        status={{ label: status, colors: statusColors }}
-      />
+      <div style={{ position: "sticky", top: 0, zIndex: 10, backgroundColor: "var(--background)", paddingBottom: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
+        <DetailHero
+          kicker="Project"
+          title={project.name}
+          meta={metaFields}
+          accentColor={statusColors.bg}
+          acronyms={acronyms}
+          status={{ label: status, colors: statusColors }}
+        />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-lg)", marginTop: "var(--space-lg)" }}>
         <Section title="Project Info">

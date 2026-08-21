@@ -39,6 +39,7 @@ export async function PATCH(
     data: {
       value: body.value !== undefined ? body.value : undefined,
       acronym: body.acronym !== undefined ? body.acronym : undefined,
+      color: body.color !== undefined ? body.color : undefined,
       status: body.status !== undefined ? body.status : undefined,
       sortOrder: body.sortOrder !== undefined ? body.sortOrder : undefined,
       archived: body.archived !== undefined ? body.archived : undefined,

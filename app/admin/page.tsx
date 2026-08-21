@@ -28,6 +28,7 @@ interface ConfigItem {
   category: string;
   value: string;
   acronym: string | null;
+  color: string | null;
   status: string | null;
   sortOrder: number;
 }
@@ -53,6 +54,8 @@ export default function AdminPage() {
   const [editValue, setEditValue] = useState("");
   const [editAcronym, setEditAcronym] = useState("");
   const [newAcronym, setNewAcronym] = useState("");
+  const [editColor, setEditColor] = useState("");
+  const [newColor, setNewColor] = useState("");
   const fetched = useRef(false);
 
   const categories = [
@@ -100,7 +103,7 @@ export default function AdminPage() {
   const tableColumns: { key: string; label: string; sortable?: boolean }[] = [
     ...adminColumns.slice(0, 2),
     { key: "value", label: valueLabel },
-    ...(isBallGroups ? [{ key: "acronym", label: "Acronym" }] : []),
+    ...(isBallGroups ? [{ key: "acronym", label: "Acronym" }, { key: "color", label: "Color", sortable: false }] : []),
     ...(isStageTemplate ? [{ key: "status", label: "Project Status", sortable: false }] : []),
     { key: "actions", label: "Actions", sortable: false },
   ];
@@ -134,6 +137,7 @@ export default function AdminPage() {
         category: activeCategory,
         value: newValue.trim(),
         acronym: isBallGroups ? newAcronym.trim() || null : null,
+        color: isBallGroups ? newColor.trim() || null : null,
         sortOrder: filtered.length,
       }),
     });
@@ -148,7 +152,7 @@ export default function AdminPage() {
     await fetch(`/api/config-value/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value: editValue, acronym: isBallGroups ? editAcronym.trim() || null : undefined }),
+      body: JSON.stringify({ value: editValue, acronym: isBallGroups ? editAcronym.trim() || null : undefined, color: isBallGroups ? editColor.trim() || null : undefined }),
     });
     setEditingId(null);
     refetch();
@@ -333,6 +337,21 @@ export default function AdminPage() {
               }}
             />
           )}
+          {isBallGroups && (
+            <input
+              type="color"
+              value={newColor || "#000000"}
+              onChange={(e) => setNewColor(e.target.value)}
+              style={{
+                width: "36px",
+                height: "32px",
+                padding: "2px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+              }}
+            />
+          )}
           <button
             onClick={addItem}
             disabled={!newValue.trim()}
@@ -424,6 +443,22 @@ export default function AdminPage() {
                             )}
                           </td>
                         )}
+                        {isBallGroups && (
+                          <td style={{ padding: "8px 10px" }}>
+                            {editingId === item.id ? (
+                              <input
+                                type="color"
+                                value={editColor || "#000000"}
+                                onChange={(e) => setEditColor(e.target.value)}
+                                style={{ width: "32px", height: "28px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer" }}
+                              />
+                            ) : (
+                              item.color ? (
+                                <span style={{ display: "inline-block", width: "16px", height: "16px", borderRadius: "3px", backgroundColor: item.color, border: "1px solid var(--rule)" }} />
+                              ) : "—"
+                            )}
+                          </td>
+                        )}
                         <td style={{ padding: "8px 10px" }}>
                           {isStageTemplate && (
                             <select
@@ -454,7 +489,7 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button onClick={() => { setEditingId(item.id); setEditValue(item.value); setEditAcronym(item.acronym ?? ""); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
+                              <button onClick={() => { setEditingId(item.id); setEditValue(item.value); setEditAcronym(item.acronym ?? ""); setEditColor(item.color ?? ""); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Edit</button>
                               <button onClick={() => deleteItem(item.id)} style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}>Delete</button>
                             </div>
                           )}

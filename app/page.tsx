@@ -59,7 +59,14 @@ const cellRenderers: Record<string, CellRenderer> = {
   project: ({ entry }) => <ProjectCell entry={entry} />,
   workStream: ({ entry }) => entry.workStreamName || "—",
   currentStage: ({ entry }) => entry.currentStage || "—",
-  ballHolder: ({ entry }) => entry.ballHolder || "—",
+  ballHolder: ({ entry }) => (
+    <div>
+      <div>{entry.ballHolder || "—"}</div>
+      {entry.ballPerson && (
+        <div style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>{entry.ballPerson}</div>
+      )}
+    </div>
+  ),
   note: ({ entry }) => entry.note || "—",
   duration: ({ entry }) => entry.duration || "—",
 };
@@ -68,7 +75,7 @@ const cellStyles: Record<string, CSSProperties> = {
   workStream: { color: "var(--ink-secondary)" },
   ballHolder: { color: "var(--ink-secondary)" },
   note: { color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  duration: { color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" },
+  duration: { color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", textAlign: "right" },
 };
 
 function DashboardTable({
@@ -115,6 +122,7 @@ function DashboardTable({
                   style={{
                     backgroundColor: "var(--ground-metric)",
                     borderBottom: "1px solid var(--rule-strong)",
+                    ...(col.key === "duration" ? { textAlign: "right" } : {}),
                   }}
                 />
               ))}

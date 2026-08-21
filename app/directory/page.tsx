@@ -24,6 +24,7 @@ interface SortableColumn {
 const entryColumns: SortableColumn[] = [
   { key: "system", label: "System" },
   { key: "acronym", label: "Acronym" },
+  { key: "color", label: "Color", sortable: false },
   { key: "module", label: "Module" },
   { key: "developerAssigned", label: "Developer Assigned" },
   { key: "systemOwnerName", label: "System Owner (Name)" },
@@ -78,6 +79,7 @@ export default function DirectoryPage() {
 
   const [newSystem, setNewSystem] = useState("");
   const [newAcronym, setNewAcronym] = useState("");
+  const [newColor, setNewColor] = useState("");
   const [newModule, setNewModule] = useState("");
   const [newDeveloper, setNewDeveloper] = useState("");
   const [newOwnerName, setNewOwnerName] = useState("");
@@ -88,6 +90,7 @@ export default function DirectoryPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editSystem, setEditSystem] = useState("");
   const [editAcronym, setEditAcronym] = useState("");
+  const [editColor, setEditColor] = useState("");
   const [editModule, setEditModule] = useState("");
   const [editDeveloper, setEditDeveloper] = useState("");
   const [editOwnerName, setEditOwnerName] = useState("");
@@ -177,6 +180,7 @@ export default function DirectoryPage() {
       body: JSON.stringify({
         system: newSystem.trim(),
         acronym: newAcronym.trim() || null,
+        color: newColor.trim() || null,
         module: newModule.trim() || null,
         developerAssigned: newDeveloper.trim() || null,
         systemOwnerName: newOwnerName.trim() || null,
@@ -190,6 +194,7 @@ export default function DirectoryPage() {
     }
     setNewSystem("");
     setNewAcronym("");
+    setNewColor("");
     setNewModule("");
     setNewDeveloper("");
     setNewOwnerName("");
@@ -206,6 +211,7 @@ export default function DirectoryPage() {
       body: JSON.stringify({
         system: editSystem,
         acronym: editAcronym || null,
+        color: editColor || null,
         module: editModule || null,
         developerAssigned: editDeveloper || null,
         systemOwnerName: editOwnerName || null,
@@ -377,6 +383,10 @@ export default function DirectoryPage() {
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Acronym</span>
                 <input type="text" value={newAcronym} onChange={(e) => setNewAcronym(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
               </div>
+              <div style={{ flex: "0 0 60px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Color</span>
+                <input type="color" value={newColor || "#000000"} onChange={(e) => setNewColor(e.target.value)} style={{ width: "100%", height: "32px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer", boxSizing: "border-box" }} />
+              </div>
               <div style={{ flex: "1 1 150px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Module</span>
                 <ComboField
@@ -472,6 +482,15 @@ export default function DirectoryPage() {
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (
+                            <input type="color" value={editColor || "#000000"} onChange={(e) => setEditColor(e.target.value)} style={{ width: "32px", height: "28px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer" }} />
+                          ) : (
+                            entry.color ? (
+                              <span style={{ display: "inline-block", width: "16px", height: "16px", borderRadius: "3px", backgroundColor: entry.color, border: "1px solid var(--rule)" }} />
+                            ) : "—"
+                          )}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          {editingId === entry.id ? (
                             <input type="text" value={editModule} onChange={(e) => setEditModule(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
                           ) : (
                             entry.module || "—"
@@ -525,7 +544,7 @@ export default function DirectoryPage() {
                           ) : (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>
                               <button
-                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditAcronym(entry.acronym ?? ""); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); }}
+                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditAcronym(entry.acronym ?? ""); setEditColor(entry.color ?? ""); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); }}
                                 style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
                               >
                                 Edit

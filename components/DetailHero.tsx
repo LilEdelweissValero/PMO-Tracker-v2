@@ -5,7 +5,7 @@ interface DetailHeroProps {
   title: string;
   meta: { label: string; value: string | null }[];
   accentColor?: string;
-  acronyms?: string[];
+  acronyms?: { label: string; color?: string | null }[];
   status?: { label: string; colors: { bg: string; ink: string } } | null;
 }
 
@@ -109,15 +109,15 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
                   style={{
                     padding: "3px 9px",
                     borderRadius: "var(--radius-sm)",
-                    backgroundColor: "var(--accent-bg)",
-                    color: "var(--accent)",
+                    backgroundColor: acr.color ? `${acr.color}20` : "var(--accent-bg)",
+                    color: acr.color || "var(--accent)",
                     fontSize: "12px",
                     fontWeight: 600,
                     letterSpacing: "0.04em",
                     fontFamily: "var(--font-sans)",
                   }}
                 >
-                  {acr}
+                  {acr.label}
                 </span>
               ))}
             </div>
