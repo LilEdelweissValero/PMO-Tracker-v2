@@ -75,7 +75,7 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                       {entry.ballPerson || "—"}
                     </div>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
                     {entry.duration || "—"}
                   </td>
                 </tr>

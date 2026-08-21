@@ -13,6 +13,16 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
   return (
     <div
       style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        backgroundColor: "var(--background)",
+        padding: "var(--space-lg)",
+        marginBottom: "var(--space-sm)",
+      }}
+    >
+    <div
+      style={{
         backgroundColor: "var(--surface)",
         border: "1px solid var(--rule)",
         borderTop: `4px solid ${accentColor ?? "var(--accent)"}`,
@@ -159,6 +169,7 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

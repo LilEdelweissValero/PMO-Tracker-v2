@@ -307,16 +307,14 @@ export default function ProjectDetailPage() {
 
   return (
     <div style={{ padding: "var(--space-lg)", maxWidth: "1600px", margin: "0 auto" }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 10, backgroundColor: "var(--background)", paddingBottom: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
-        <DetailHero
-          kicker="Project"
-          title={project.name}
-          meta={metaFields}
-          accentColor={statusColors.bg}
-          acronyms={acronyms}
-          status={{ label: status, colors: statusColors }}
-        />
-      </div>
+      <DetailHero
+        kicker="Project"
+        title={project.name}
+        meta={metaFields}
+        accentColor={statusColors.bg}
+        acronyms={acronyms}
+        status={{ label: status, colors: statusColors }}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-lg)", marginTop: "var(--space-lg)" }}>
         <Section title="Project Info">
@@ -427,7 +425,7 @@ export default function ProjectDetailPage() {
             templateStages={templateStages}
             projectStatuses={projectStatuses}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
-            onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
+
             onUpdateStage={(stageId, data) => updateStage(stageId, data)}
             onReorderStages={(orderedIds) => reorderStages(ws.id, orderedIds)}
             onDeleteStage={deleteStage}
@@ -582,7 +580,7 @@ export default function ProjectDetailPage() {
         title="Add Work Stream"
         fields={[
           { key: "name", label: "Work Stream Name" },
-          { key: "assignedDeveloper", label: "Assigned Developer", type: "combo", source: { url: "/api/unit-involved?group=Developers", valueKey: "name" }, strict: true },
+
           { key: "currentBall", label: "Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
         ]}
         onSubmit={addWorkStream}
@@ -817,7 +815,7 @@ function WorkStreamCard({
   templateStages,
   projectStatuses,
   onUpdateName,
-  onUpdateDeveloper,
+
   onUpdateStage,
   onReorderStages,
   onDeleteStage,
@@ -832,7 +830,7 @@ function WorkStreamCard({
   templateStages: TemplateStage[];
   projectStatuses: { value: string }[];
   onUpdateName: (name: string) => void;
-  onUpdateDeveloper: (developer: string | null) => void;
+
   onUpdateStage: (stageId: number, data: Record<string, string | number | null>) => void;
   onReorderStages: (orderedIds: number[]) => void;
   onDeleteStage: (stageId: number) => void;
@@ -854,9 +852,6 @@ function WorkStreamCard({
   const bumpMsg = latestBump?.note || null;
   const lastBumped = latestBump ? (latestBump.bumpDate ? new Date(latestBump.bumpDate) : new Date(latestBump.changedAt)) : null;
 
-  const developers = units
-    .filter((u) => u.group.toLowerCase() === "developers")
-    .map((u) => u.name);
 
   const namesForGroup = (group: string) =>
     units
@@ -1003,28 +998,6 @@ function WorkStreamCard({
         </div>
       </div>
 
-      <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)", display: "flex", alignItems: "center", gap: "6px" }}>
-        Developer:
-        <select
-          value={ws.assignedDeveloper ?? ""}
-          onChange={(e) => onUpdateDeveloper(e.target.value || null)}
-          style={{
-            padding: "2px 6px",
-            border: "1px solid var(--rule)",
-            borderRadius: "var(--radius-sm)",
-            fontSize: "12px",
-            fontFamily: "var(--font-sans)",
-            outline: "none",
-            backgroundColor: "var(--surface)",
-            color: ws.assignedDeveloper ? "var(--ink-primary)" : "var(--ink-tertiary)",
-          }}
-        >
-          <option value="">Unassigned</option>
-          {developers.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
-      </div>
 
       {ws.task && (
         <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)" }}>
@@ -1141,48 +1114,48 @@ function WorkStreamCard({
                   </td>
                   <td style={{ padding: "6px 8px" }}>
                     <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                      <select
-                        value={stage.responsibleGroup ?? ""}
-                        onChange={(e) => onUpdateStage(stage.id, { responsibleGroup: e.target.value || null, responsiblePerson: null })}
-                        title="Responsible group"
-                        style={{
-                          padding: "2px 4px",
-                          border: "1px solid var(--rule)",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "12px",
-                          fontFamily: "var(--font-sans)",
-                          outline: "none",
-                          backgroundColor: "var(--surface)",
-                          maxWidth: "96px",
-                        }}
-                      >
-                        <option value="">—</option>
-                        {ballGroups.map((g) => (
-                          <option key={g} value={g}>{ballGroupAcronymMap.get(g) || g}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={stage.responsiblePerson ?? ""}
-                        onChange={(e) => onUpdateStage(stage.id, { responsiblePerson: e.target.value || null })}
-                        disabled={!stage.responsibleGroup}
-                        title="Responsible person"
-                        style={{
-                          padding: "2px 4px",
-                          border: "1px solid var(--rule)",
-                          borderRadius: "var(--radius-sm)",
-                          fontSize: "12px",
-                          fontFamily: "var(--font-sans)",
-                          outline: "none",
-                          backgroundColor: "var(--surface)",
-                          opacity: stage.responsibleGroup ? 1 : 0.5,
-                          maxWidth: "116px",
-                        }}
-                      >
-                        <option value="">—</option>
-                        {namesForGroup(stage.responsibleGroup ?? "").map((n) => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
-                      </select>
+                      {stage.responsibleGroup && (
+                        <span
+                          style={{
+                            padding: "2px 6px",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "12px",
+                            fontFamily: "var(--font-sans)",
+                            backgroundColor: "var(--ground-metric)",
+                            color: "var(--ink-primary)",
+                            maxWidth: "96px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={stage.responsibleGroup}
+                        >
+                          {ballGroupAcronymMap.get(stage.responsibleGroup) || stage.responsibleGroup}
+                        </span>
+                      )}
+                      {stage.responsiblePerson && (
+                        <span
+                          style={{
+                            padding: "2px 6px",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "12px",
+                            fontFamily: "var(--font-sans)",
+                            backgroundColor: "var(--surface)",
+                            color: "var(--ink-primary)",
+                            border: "1px solid var(--rule)",
+                            maxWidth: "116px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={stage.responsiblePerson}
+                        >
+                          {stage.responsiblePerson}
+                        </span>
+                      )}
+                      {!stage.responsibleGroup && !stage.responsiblePerson && (
+                        <span style={{ fontSize: "12px", color: "var(--ink-tertiary)" }}>—</span>
+                      )}
                     </div>
                   </td>
                   <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
