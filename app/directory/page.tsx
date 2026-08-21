@@ -24,9 +24,8 @@ const personnelColumns: SortableColumn[] = [
 ];
 
 const entryColumns: SortableColumn[] = [
-  { key: "system", label: "System" },
   { key: "acronym", label: "Acronym" },
-  { key: "color", label: "Color", sortable: false },
+  { key: "system", label: "System" },
   { key: "module", label: "Module" },
   { key: "developerAssigned", label: "Developer Assigned" },
   { key: "systemOwnerName", label: "System Owner (Name)" },
@@ -511,6 +510,14 @@ export default function DirectoryPage() {
           <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
             <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
             <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 110px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Acronym</span>
+                <input type="text" value={newAcronym} onChange={(e) => setNewAcronym(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ flex: "0 0 60px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Color</span>
+                <input type="color" value={newColor || "#000000"} onChange={(e) => setNewColor(e.target.value)} style={{ width: "100%", height: "32px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer", boxSizing: "border-box" }} />
+              </div>
               <div style={{ flex: "1 1 170px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>System *</span>
                 <ComboField
@@ -520,14 +527,6 @@ export default function DirectoryPage() {
                   value={newSystem}
                   onChange={setNewSystem}
                 />
-              </div>
-              <div style={{ flex: "1 1 110px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Acronym</span>
-                <input type="text" value={newAcronym} onChange={(e) => setNewAcronym(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
-              </div>
-              <div style={{ flex: "0 0 60px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Color</span>
-                <input type="color" value={newColor || "#000000"} onChange={(e) => setNewColor(e.target.value)} style={{ width: "100%", height: "32px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer", boxSizing: "border-box" }} />
               </div>
               <div style={{ flex: "1 1 150px", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Module</span>
@@ -610,25 +609,33 @@ export default function DirectoryPage() {
                       <tr key={entry.id} style={{ borderBottom: "1px solid var(--rule)" }}>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <input type="text" value={editAcronym} onChange={(e) => setEditAcronym(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "80px" }} />
+                              <input type="color" value={editColor || "#000000"} onChange={(e) => setEditColor(e.target.value)} style={{ width: "28px", height: "28px", padding: "1px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer" }} />
+                            </div>
+                          ) : entry.acronym ? (
+                            <span style={{
+                              display: "inline-block",
+                              padding: "2px 8px",
+                              borderRadius: "var(--radius-md)",
+                              backgroundColor: entry.color || "var(--ink-tertiary)",
+                              color: "#FFFFFF",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              fontFamily: "var(--font-sans)",
+                              lineHeight: "18px",
+                            }}>
+                              {entry.acronym}
+                            </span>
                           ) : (
-                            entry.system
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
-                          {editingId === entry.id ? (
-                            <input type="text" value={editAcronym} onChange={(e) => setEditAcronym(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }} />
-                          ) : (
-                            entry.acronym || "—"
+                            <span style={{ color: "var(--ink-tertiary)" }}>—</span>
                           )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (
-                            <input type="color" value={editColor || "#000000"} onChange={(e) => setEditColor(e.target.value)} style={{ width: "32px", height: "28px", padding: "2px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer" }} />
+                            <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
                           ) : (
-                            entry.color ? (
-                              <span style={{ display: "inline-block", width: "16px", height: "16px", borderRadius: "3px", backgroundColor: entry.color, border: "1px solid var(--rule)" }} />
-                            ) : "—"
+                            entry.system
                           )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>

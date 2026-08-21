@@ -246,7 +246,7 @@ export default function AdminPage() {
           ],
           project_status: [
             { from: "Status", to: "Default Stage Template", desc: "Renaming a status automatically updates all stage templates referencing it." },
-            { from: "Status", to: "Project Cards", desc: "Project status is computed from stage template progress. Renaming changes labels across the app." },
+            { from: "Status", to: "Project Cards", desc: "Project status is automatically determined by the slowest work stream across all stages. Renaming a status changes the label shown on project cards and dashboards." },
           ],
           priority: [
             { from: "Priority", to: "Project Forms", desc: "Values appear as dropdown options when creating or editing projects." },
@@ -384,7 +384,18 @@ export default function AdminPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {tableColumns.map((col) => (
+                {tableColumns.map((col) => col.key === "grip" ? (
+                  <th
+                    key={col.key}
+                    style={{
+                      padding: "2px 4px",
+                      width: "20px",
+                      textAlign: "center",
+                      backgroundColor: "var(--ground-metric)",
+                      borderBottom: "1px solid var(--rule-strong)",
+                    }}
+                  />
+                ) : (
                   <SortableTh
                     key={col.key}
                     label={col.label}
