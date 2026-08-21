@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
   }
 
   const logs = await prisma.changeLog.findMany({
-    where: { changedAt: { lte: asOfDate } },
-    orderBy: { changedAt: "asc" },
+    where: { bumpDate: { lte: asOfDate } },
+    orderBy: { bumpDate: "asc" },
   });
 
   const projects = await prisma.project.findMany({

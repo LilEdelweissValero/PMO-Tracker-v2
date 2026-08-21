@@ -56,17 +56,17 @@ export async function GET(request: NextRequest) {
 
   const whereClause: Record<string, unknown> = {};
   if (asOf) {
-    whereClause.changedAt = { lte: new Date(asOf) };
+    whereClause.bumpDate = { lte: new Date(asOf) };
   }
 
   const progressLogs = await prisma.changeLog.findMany({
     where: { ...whereClause, entryType: "progress" },
-    orderBy: { changedAt: "desc" },
+    orderBy: { bumpDate: "desc" },
   });
 
   const bumpLogs = await prisma.changeLog.findMany({
     where: { ...whereClause, entryType: "bump" },
-    orderBy: { changedAt: "desc" },
+    orderBy: { bumpDate: "desc" },
   });
 
   const ballGroups = await prisma.configValue.findMany({
