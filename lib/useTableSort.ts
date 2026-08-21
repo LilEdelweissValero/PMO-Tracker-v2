@@ -10,7 +10,8 @@ export type SortAccessor<T> = (row: T) => string | number | null;
 export function useTableSort<T extends { id: number }>(
   rows: T[],
   accessors: Record<string, SortAccessor<T>>,
-  initialSort: SortState | null = null
+  initialSort: SortState | null = null,
+  initialDirections?: Record<string, "asc" | "desc">
 ) {
   const [sort, setSort] = useState<SortState | null>(initialSort);
 
@@ -40,7 +41,13 @@ export function useTableSort<T extends { id: number }>(
       if (!prev || prev.key !== key) {
         const sample = rows[0] ? accessors[key]?.(rows[0]) : null;
         const numeric = typeof sample === "number";
+        const initialDir = initialDirections?.[key];
+        if (initialDir) return { key, direction: initialDir };
         return { key, direction: numeric ? "desc" : "asc" };
+      }
+      const initialDir = initialDirections?.[key];
+      if (initialDir && prev.direction === initialDir) {
+        return { key, direction: initialDir === "asc" ? "desc" : "asc" };
       }
       if (prev.direction === "asc") return { key, direction: "desc" };
       return null;

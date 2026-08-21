@@ -7,9 +7,10 @@ export function useColumnSort<T extends { id: number }>(
   rows: T[],
   accessors: Record<string, SortAccessor<T>>,
   entityType: string,
-  refetch: () => void
+  refetch: () => void,
+  initialDirections?: Record<string, "asc" | "desc">
 ) {
-  const { sort, sortedRows, toggleSort, clearSort } = useTableSort(rows, accessors);
+  const { sort, sortedRows, toggleSort, clearSort } = useTableSort(rows, accessors, null, initialDirections);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 

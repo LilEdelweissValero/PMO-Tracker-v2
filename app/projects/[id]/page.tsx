@@ -41,7 +41,8 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
-  const [showManageSystems, setShowManageSystems] = useState(false);
+  const [showAddSystem, setShowAddSystem] = useState(false);
+  const [systemsTableHovered, setSystemsTableHovered] = useState(false);
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [ballGroupAcronymMap, setBallGroupAcronymMap] = useState<Map<string, string>>(new Map());
   const [units, setUnits] = useState<UnitInvolved[]>([]);
@@ -240,6 +241,30 @@ export default function ProjectDetailPage() {
     showToast("Work stream added");
   };
 
+  const removeSystem = async (systemEntryId: number) => {
+    const newIds = systems.filter((s) => s.id !== systemEntryId).map((s) => s.id);
+    await updateProject({ systemEntryIds: newIds });
+    showToast("System removed");
+  };
+
+  const addSystemAndWorkStream = async (systemEntryId: number) => {
+    const entry = await fetch(`/api/directory-entry`).then((r) => r.json()).then((data) =>
+      (data as { id: number; system: string; module: string | null }[]).find((e) => e.id === systemEntryId)
+    );
+    if (!entry) return;
+    const newIds = [...systems.map((s) => s.id), systemEntryId];
+    await updateProject({ systemEntryIds: newIds });
+    const wsName = entry.module ? `${entry.system} - ${entry.module}` : entry.system;
+    await fetch("/api/work-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: wsName, projectId }),
+    });
+    refetch();
+    playPing();
+    showToast("System and work stream added");
+  };
+
   const deleteProject = async () => {
     const res = await fetch(`/api/project/${projectId}`, { method: "DELETE" });
     if (!res.ok) {
@@ -309,65 +334,64 @@ export default function ProjectDetailPage() {
         </Section>
 
         <Section title="System Affected">
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--space-sm)" }}>
-            <button
-              onClick={() => { playPrompt(); setShowManageSystems(true); }}
-              style={{
-                padding: "7px 12px",
-                border: "1px solid var(--rule)",
-                borderRadius: "var(--radius-md)",
-                backgroundColor: "var(--surface)",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              Manage Systems
-            </button>
-          </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-            <thead>
-              <tr>
-                {["System", "Module", "Owner", "Owner Dept", "Developer Assigned"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "8px 10px",
-                      textAlign: "left",
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
-                      backgroundColor: "var(--ground-metric)",
-                      borderBottom: "1px solid var(--rule-strong)",
-                      fontFamily: "var(--font-sans)",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {systems.length === 0 ? (
+          <div
+            onMouseEnter={() => setSystemsTableHovered(true)}
+            onMouseLeave={() => setSystemsTableHovered(false)}
+            style={{ border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", overflow: "hidden" }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
                 <tr>
-                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
-                    No chosen system yet.
-                  </td>
+                  {["System", "Module", "Owner", "Owner Dept", "Developer Assigned"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "8px 10px",
+                        textAlign: "left",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        letterSpacing: "0.07em",
+                        textTransform: "uppercase",
+                        backgroundColor: "var(--ground-metric)",
+                        borderBottom: "1px solid var(--rule-strong)",
+                        fontFamily: "var(--font-sans)",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                  <th style={{ width: "32px", backgroundColor: "var(--ground-metric)", borderBottom: "1px solid var(--rule-strong)" }} />
                 </tr>
-              ) : (
-                systems.map((sys) => (
-                  <tr key={sys.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                    <td style={{ padding: "8px 10px", fontWeight: 500 }}>{sys.system}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.module || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerName || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerDept || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.developerAssigned || "—"}</td>
+              </thead>
+              <tbody>
+                {systems.length === 0 && !systemsTableHovered ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                      No chosen system yet.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  <>
+                    {systems.map((sys) => (
+                      <SystemRow key={sys.id} sys={sys} onRemove={removeSystem} />
+                    ))}
+                    {systemsTableHovered && (
+                      <tr
+                        onClick={() => { playPrompt(); setShowAddSystem(true); }}
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--accent-bg)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
+                      >
+                        <td colSpan={6} style={{ padding: "8px 10px", color: "var(--accent)", fontWeight: 500, fontSize: "12px" }}>
+                          + Add affected system
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
         </Section>
       </div>
 
@@ -572,19 +596,20 @@ export default function ProjectDetailPage() {
       />
 
       <EntityFormModal
-        key={showManageSystems ? "systems-open" : "systems-closed"}
-        open={showManageSystems}
-        onClose={() => setShowManageSystems(false)}
-        title="Manage Systems Affected"
+        key={showAddSystem ? "add-sys-open" : "add-sys-closed"}
+        open={showAddSystem}
+        onClose={() => setShowAddSystem(false)}
+        title="Add Affected System"
         fields={[
-          { key: "systemEntryIds", label: "Systems Affected", type: "multisource", source: { url: "/api/directory-entry", valueKey: "id", labelKey: "system", moduleKey: "module" } },
+          { key: "systemEntryId", label: "Select System", type: "multisource", source: { url: "/api/directory-entry", valueKey: "id", labelKey: "system", moduleKey: "module" } },
         ]}
-        initialData={{
-          systemEntryIds: systems.map((s) => s.id),
-        }}
+        initialData={{ systemEntryId: [] }}
         onSubmit={async (data) => {
-          await updateProject({ systemEntryIds: (data.systemEntryIds as number[]) ?? [] });
-          setShowManageSystems(false);
+          const ids = (data.systemEntryId as number[]) ?? [];
+          if (ids.length > 0) {
+            await addSystemAndWorkStream(ids[0]);
+          }
+          setShowAddSystem(false);
         }}
       />
 
@@ -1194,5 +1219,42 @@ function WorkStreamCard({
         </table>
       </div>
     </div>
+  );
+}
+
+function SystemRow({ sys, onRemove }: { sys: { id: number; system: string; module: string | null; systemOwnerName: string | null; systemOwnerDept: string | null; developerAssigned: string | null }; onRemove: (id: number) => void }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <tr
+      style={{ borderBottom: "1px solid var(--rule)" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <td style={{ padding: "8px 10px", fontWeight: 500 }}>{sys.system}</td>
+      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.module || "—"}</td>
+      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerName || "—"}</td>
+      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.systemOwnerDept || "—"}</td>
+      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{sys.developerAssigned || "—"}</td>
+      <td style={{ padding: "8px 4px", textAlign: "center" }}>
+        {hovered && (
+          <button
+            onClick={() => onRemove(sys.id)}
+            title="Remove system"
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--health-atrisk-ink)",
+              cursor: "pointer",
+              fontSize: "14px",
+              padding: "0 4px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
+      </td>
+    </tr>
   );
 }

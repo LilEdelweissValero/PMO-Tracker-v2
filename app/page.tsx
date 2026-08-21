@@ -68,7 +68,7 @@ const cellStyles: Record<string, CSSProperties> = {
   workStream: { color: "var(--ink-secondary)" },
   ballHolder: { color: "var(--ink-secondary)" },
   note: { color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  duration: { color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" },
+  duration: { color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" },
 };
 
 function DashboardTable({
@@ -85,7 +85,7 @@ function DashboardTable({
   const { sort, sortedRows, toggleSort } = useTableSort(entries, dashboardAccessors, {
     key: "duration",
     direction: "desc",
-  });
+  }, { duration: "desc" });
   const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   return (
