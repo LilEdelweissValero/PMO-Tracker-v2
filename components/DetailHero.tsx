@@ -17,8 +17,6 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
         top: 0,
         zIndex: 10,
         backgroundColor: "var(--background)",
-        padding: "var(--space-lg)",
-        marginBottom: "var(--space-sm)",
       }}
     >
     <div
