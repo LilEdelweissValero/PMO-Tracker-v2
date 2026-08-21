@@ -8,9 +8,10 @@ interface SortableThProps {
   onSort?: (key: string) => void;
   sortKey?: string;
   style?: React.CSSProperties;
+  hideArrow?: boolean;
 }
 
-export default function SortableTh({ label, sort, onSort, sortKey, style }: SortableThProps) {
+export default function SortableTh({ label, sort, onSort, sortKey, style, hideArrow }: SortableThProps) {
   const sortable = Boolean(onSort && sortKey);
   const active = sortable && sort?.key === sortKey;
 
@@ -33,7 +34,7 @@ export default function SortableTh({ label, sort, onSort, sortKey, style }: Sort
       }}
     >
       {label}
-      {active ? (
+      {active && !hideArrow ? (
         <span style={{ marginLeft: 3, fontSize: "9px" }}>
           {sort!.direction === "asc" ? "▲" : "▼"}
         </span>

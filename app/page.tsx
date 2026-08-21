@@ -24,7 +24,7 @@ const progressColumns: DashboardColumn[] = [
 const bumpColumns: DashboardColumn[] = [
   { key: "project", label: "Project ID" },
   { key: "workStream", label: "Work Stream" },
-  { key: "note", label: "Bump Msg" },
+  { key: "currentStage", label: "Task" },
   { key: "ballHolder", label: "Ball Holder" },
   { key: "duration", label: "Duration" },
 ];
@@ -111,6 +111,7 @@ function DashboardTable({
                   sort={sort}
                   sortKey={col.key}
                   onSort={toggleSort}
+                  hideArrow={col.key === "duration"}
                   style={{
                     backgroundColor: "var(--ground-metric)",
                     borderBottom: "1px solid var(--rule-strong)",
