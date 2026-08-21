@@ -129,17 +129,12 @@ export async function POST(request: NextRequest) {
 
   const requestedByNameValue = typeof body.requestedByName === "string" ? body.requestedByName.trim() : "";
   const requestedByDeptValue = typeof body.requestedByDept === "string" ? body.requestedByDept.trim() : "";
-  const systemOwnerNameValue = typeof body.systemOwnerName === "string" ? body.systemOwnerName.trim() : "";
-  const systemOwnerDeptValue = typeof body.systemOwnerDept === "string" ? body.systemOwnerDept.trim() : "";
 
   if (!requestedByNameValue) {
     return NextResponse.json({ error: "Project Owner is required" }, { status: 400 });
   }
   if (!requestedByDeptValue) {
     return NextResponse.json({ error: "Business Unit is required" }, { status: 400 });
-  }
-  if (!isNewSystem && (!systemOwnerNameValue || !systemOwnerDeptValue)) {
-    return NextResponse.json({ error: "System Owner is required when Request Type is not New System" }, { status: 400 });
   }
 
   try {
@@ -180,8 +175,6 @@ export async function POST(request: NextRequest) {
         requestedByDept: requestedByDeptValue || null,
         systemName: systemNameValue || null,
         specificModule: typeof body.specificModule === "string" ? body.specificModule.trim() || null : null,
-        systemOwnerName: systemOwnerNameValue || null,
-        systemOwnerDept: systemOwnerDeptValue || null,
         requestType: requestTypeValue || null,
         pmOfficer: body.pmOfficer || null,
         remarks: body.remarks || null,

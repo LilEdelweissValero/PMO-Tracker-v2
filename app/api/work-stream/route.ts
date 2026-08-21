@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     name: body.name ?? project.name,
     assignedDeveloper: body.assignedDeveloper ?? null,
     currentBall: body.currentBall ?? "Project Management Office",
+    task: body.task ?? null,
+    responsiblePerson: body.responsiblePerson ?? null,
     changedBy: body.changedBy ?? "System",
   });
 

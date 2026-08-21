@@ -34,6 +34,8 @@ export async function createWorkStreamWithStages(params: {
   name: string | null;
   assignedDeveloper?: string | null;
   currentBall?: string;
+  task?: string | null;
+  responsiblePerson?: string | null;
   changedBy?: string;
 }) {
   const templateStages = await prisma.configValue.findMany({
@@ -47,10 +49,13 @@ export async function createWorkStreamWithStages(params: {
       name: params.name ?? null,
       assignedDeveloper: params.assignedDeveloper ?? null,
       currentBall: params.currentBall ?? "Project Management Office",
+      task: params.task ?? null,
       flowStages: {
         create: templateStages.map((stage, i) => ({
           name: stage.value,
           orderIdx: i,
+          responsibleGroup: i === 0 ? (params.currentBall ?? null) : null,
+          responsiblePerson: i === 0 ? (params.responsiblePerson ?? null) : null,
         })),
       },
     },
@@ -79,6 +84,21 @@ export async function createWorkStreamWithStages(params: {
     newValue: workStream.name ?? "Work Stream",
     changedBy,
   });
+
+  if (params.currentBall || params.responsiblePerson) {
+    const holder = params.responsiblePerson
+      ? `${params.currentBall} - ${params.responsiblePerson}`
+      : params.currentBall ?? undefined;
+    await logChange({
+      workStreamId: workStream.id,
+      projectId: params.projectId,
+      entryType: "bump",
+      fieldName: templateStages[0]?.value ?? "—",
+      newValue: holder,
+      note: params.task ?? undefined,
+      changedBy,
+    });
+  }
 
   return workStream;
 }

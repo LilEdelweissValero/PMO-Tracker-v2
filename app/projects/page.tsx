@@ -243,9 +243,8 @@ export default function ProjectsPage() {
           { key: "requestedByDept", label: "Requested By Dept", type: "combo", configCategory: "requested_by_dept", required: true },
           { key: "requestType", label: "Request Type", type: "combo", configCategory: "request_type", required: true, strict: true },
           { key: "systems", label: "Systems Affected", type: "systemModules", hiddenIf: (d) => String(d.requestType ?? "").trim() === "New System" },
-          { key: "systemOwnerName", label: "System Owner Name", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
-          { key: "systemOwnerDept", label: "System Owner Dept", type: "text", requiredIf: (d) => String(d.requestType ?? "").trim() !== "New System" },
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true, strict: true },
+          { key: "_divider1", label: "", type: "divider", dividerLabel: "Ball Setup" },
           { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
         ]}
         onSubmit={handleCreate}

@@ -227,10 +227,16 @@ export default function ProjectDetailPage() {
   };
 
   const addWorkStream = async (data: Record<string, FormValue>) => {
+    const { ballHolder, initialTask, ...rest } = data;
     const res = await fetch("/api/work-stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, projectId }),
+      body: JSON.stringify({
+        ...rest,
+        projectId,
+        responsiblePerson: ballHolder || null,
+        task: initialTask || null,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -580,8 +586,9 @@ export default function ProjectDetailPage() {
         title="Add Work Stream"
         fields={[
           { key: "name", label: "Work Stream Name" },
-
-          { key: "currentBall", label: "Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
+          { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
+          { key: "ballHolder", label: "Initial Ball Holder", type: "combo", source: { url: "/api/unit-involved", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true },
+          { key: "initialTask", label: "Initial Task" },
         ]}
         onSubmit={addWorkStream}
       />

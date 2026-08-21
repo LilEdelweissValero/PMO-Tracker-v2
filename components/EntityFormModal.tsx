@@ -8,7 +8,7 @@ import type { FormValue, SystemSelection } from "@/lib/types";
 interface Field {
   key: string;
   label: string;
-  type?: "text" | "textarea" | "select" | "number" | "combo" | "multisource" | "systemModules";
+  type?: "text" | "textarea" | "select" | "number" | "combo" | "multisource" | "systemModules" | "divider";
   options?: { label: string; value: string }[];
   configCategory?: string;
   source?: { url: string; valueKey: string; labelKey?: string; moduleKey?: string };
@@ -18,6 +18,7 @@ interface Field {
   strict?: boolean;
   filterBy?: string;
   sourceFilterKey?: string;
+  dividerLabel?: string;
 }
 
 interface EntityFormModalProps {
@@ -92,6 +93,19 @@ export default function EntityFormModal({
       <form ref={formRef} onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
         {fields.map((field) => {
           if (field.hiddenIf?.(formData)) return null;
+          if (field.type === "divider") {
+            return (
+              <div key={field.key} style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", margin: "var(--space-sm) 0" }}>
+                <div style={{ flex: 1, height: "1px", backgroundColor: "var(--rule)" }} />
+                {field.dividerLabel && (
+                  <span style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+                    {field.dividerLabel}
+                  </span>
+                )}
+                <div style={{ flex: 1, height: "1px", backgroundColor: "var(--rule)" }} />
+              </div>
+            );
+          }
           return (
           <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <label
