@@ -97,6 +97,8 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
   const [newTaskName, setNewTaskName] = useState("");
   const [saving, setSaving] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [dirty, setDirty] = useState(false);
+  const [currentTask, setCurrentTask] = useState("");
 
   const workStreamIdsRef = useRef(workStreamIds);
   useEffect(() => {
@@ -164,6 +166,8 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
         setBumpMsg("");
         setSaving(false);
         setNowMs(Date.now());
+        setDirty(false);
+        setCurrentTask(active?.task ?? "");
       })
       .catch(() => {});
     return () => {
@@ -207,6 +211,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
   const anchorLabel = anchorDate ? anchorDate.toLocaleString() : "—";
 
   const toggleSelect = (wsId: number) => {
+    setDirty(true);
     setSelectedWsIds((prev) => {
       const included = prev.includes(wsId);
       const next = included ? prev.filter((id) => id !== wsId) : [...prev, wsId];
@@ -228,6 +233,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
   const logBump = async () => {
     if (!activeWs || !bumpMsg.trim() || saving) return;
+    if (isFirstBump && !currentTask.trim()) return;
     setSaving(true);
     const isoDate = new Date(bumpDate).toISOString();
     const holder = ballPerson ? `${ballGroup} - ${ballPerson}` : ballGroup;
@@ -246,11 +252,20 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             projectId,
             entryType: "bump",
             fieldName: ws.currentStage?.name ?? "—",
+            oldValue: currentTask.trim() || null,
             newValue: holder,
             note: bumpMsg,
             bumpDate: isoDate,
           }),
         });
+
+        if (currentTask.trim()) {
+          await fetch(`/api/work-stream/${ws.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task: currentTask.trim() }),
+          });
+        }
 
         if (taskDone && ballGroup) {
           if (ballGroup !== ws.currentBall) {
@@ -339,6 +354,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
       }
 
       onSaved();
+      setDirty(false);
       onClose();
       playPing();
       showToast("Bump logged");
@@ -349,8 +365,18 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
     }
   };
 
+  const isFirstBump = !activeWs?.latestBump;
+  const canSave = bumpMsg.trim() && !saving && (!isFirstBump || currentTask.trim());
+
+  const beforeClose = () => {
+    if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+      return false;
+    }
+    return true;
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title="Add Bump">
+    <Modal open={open} onClose={onClose} onBeforeClose={beforeClose} title="Add Bump">
       {workStreams.length === 0 ? (
         <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
       ) : (
@@ -437,7 +463,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               <span style={{ color: "var(--ink-tertiary)", fontWeight: 600, textTransform: "uppercase", fontSize: "10px", letterSpacing: "0.08em" }}>
                 Current Task:{" "}
               </span>
-              <span style={{ fontWeight: 600 }}>{activeStageName}</span>
+              <span style={{ fontWeight: 600 }}>{activeWs?.task || "—"}</span>
             </div>
             <div style={{ fontSize: "11px", color: "var(--ink-secondary)" }}>
               This task has been ongoing for <strong>{durationLabel ?? "—"}</strong> since{" "}
@@ -447,10 +473,36 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
           <div style={{ height: 1, backgroundColor: "var(--rule)" }} />
 
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <Label>Current Task{isFirstBump && <span style={{ color: "var(--health-atrisk-ink)" }}> *</span>}</Label>
+            <input
+              type="text"
+              value={currentTask}
+              onChange={(e) => { setDirty(true); setCurrentTask(e.target.value); }}
+              placeholder={isFirstBump ? "Enter what is currently being worked on..." : "Enter current task..."}
+              required={isFirstBump}
+              style={{
+                padding: "6px 10px",
+                border: "1px solid var(--rule)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "13px",
+                fontFamily: "var(--font-sans)",
+                outline: "none",
+                backgroundColor: "var(--surface)",
+                color: "var(--ink-primary)",
+              }}
+            />
+            {isFirstBump && (
+              <div style={{ fontSize: "11px", color: "var(--ink-secondary)" }}>
+                This is the first bump. Please indicate what is currently being worked on.
+              </div>
+            )}
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
               <Label>Current Task Done?</Label>
-              <YesNoToggle value={taskDone} onChange={setTaskDone} />
+              <YesNoToggle value={taskDone} onChange={(v) => { setDirty(true); setTaskDone(v); }} />
             </div>
             {taskDone && (
               <div
@@ -472,6 +524,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
                     <select
                       value={ballGroup}
                       onChange={(e) => {
+                        setDirty(true);
                         setBallGroup(e.target.value);
                         setBallPerson("");
                       }}
@@ -499,7 +552,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
                     </label>
                     <select
                       value={ballPerson}
-                      onChange={(e) => setBallPerson(e.target.value)}
+                      onChange={(e) => { setDirty(true); setBallPerson(e.target.value); }}
                       style={{
                         padding: "6px 10px",
                         border: "1px solid var(--rule)",
@@ -527,7 +580,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
                   <input
                     type="text"
                     value={newTaskName}
-                    onChange={(e) => setNewTaskName(e.target.value)}
+                    onChange={(e) => { setDirty(true); setNewTaskName(e.target.value); }}
                     placeholder="Enter new task name..."
                     style={{
                       padding: "6px 10px",
@@ -551,6 +604,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               <YesNoToggle
                 value={hasProgress}
                 onChange={(v) => {
+                  setDirty(true);
                   setHasProgress(v);
                   if (!v) setProgressStageId(null);
                 }}
@@ -569,7 +623,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               >
                 <select
                   value={progressStageId ?? ""}
-                  onChange={(e) => setProgressStageId(Number(e.target.value) || null)}
+                  onChange={(e) => { setDirty(true); setProgressStageId(Number(e.target.value) || null); }}
                   style={{
                     padding: "6px 10px",
                     border: "1px solid var(--rule)",
@@ -605,7 +659,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
           <DatePicker
             label="Bump Date & Time"
             value={bumpDate}
-            onChange={setBumpDate}
+            onChange={(v) => { setDirty(true); setBumpDate(v); }}
             withTime
           />
 
@@ -613,7 +667,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             <Label>Bump Msg</Label>
             <textarea
               value={bumpMsg}
-              onChange={(e) => setBumpMsg(e.target.value)}
+              onChange={(e) => { setDirty(true); setBumpMsg(e.target.value); }}
               rows={3}
               placeholder="Enter bump message..."
               style={{
@@ -632,7 +686,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)" }}>
             <button
-              onClick={onClose}
+              onClick={() => { if (beforeClose()) onClose(); }}
               style={{
                 padding: "7px 12px",
                 border: "1px solid var(--rule)",
@@ -647,17 +701,17 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
             </button>
             <button
               onClick={logBump}
-              disabled={!bumpMsg.trim() || saving}
+              disabled={!canSave}
               style={{
                 padding: "7px 12px",
                 border: "none",
                 borderRadius: "var(--radius-md)",
                 backgroundColor: "var(--accent)",
                 color: "#FFFFFF",
-                cursor: bumpMsg.trim() && !saving ? "pointer" : "not-allowed",
+                cursor: canSave ? "pointer" : "not-allowed",
                 fontSize: "13px",
                 fontFamily: "var(--font-sans)",
-                opacity: bumpMsg.trim() && !saving ? 1 : 0.5,
+                opacity: canSave ? 1 : 0.5,
               }}
             >
               Save Bump

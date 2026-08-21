@@ -187,6 +187,8 @@ export default function ComboField({
     commitValue(value);
   };
 
+  const isInvalidStrict = strict && value.trim() !== "" && !options.some((o) => o.value === value.trim());
+
   if (loading) {
     return <input type="text" value="" readOnly style={inputStyle} placeholder="Loading..." />;
   }
@@ -249,6 +251,11 @@ export default function ComboField({
               </div>
             );
           })}
+        </div>
+      )}
+      {isInvalidStrict && (
+        <div style={{ fontSize: "11px", color: "var(--health-atrisk-ink)", marginTop: "4px" }}>
+          Must select from the list only.
         </div>
       )}
     </div>

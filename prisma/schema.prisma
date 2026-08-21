@@ -62,6 +62,7 @@ model WorkStream {
   name              String?
   assignedDeveloper String?   @map("assigned_developer")
   currentBall       String    @default("Project Management Office") @map("current_ball")
+  task              String?
   archived          Boolean   @default(false)
   sortOrder         Int       @default(0) @map("sort_order")
   createdAt         DateTime  @default(now()) @map("created_at")

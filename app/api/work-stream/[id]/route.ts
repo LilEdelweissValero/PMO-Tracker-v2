@@ -40,13 +40,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const trackedFields = ["name", "assignedDeveloper", "currentBall"];
+  const trackedFields = ["name", "assignedDeveloper", "currentBall", "task"];
   for (const field of trackedFields) {
     if (field in body && body[field] !== (existing as Record<string, unknown>)[field]) {
       await logChange({
         workStreamId: wsId,
         projectId: existing.projectId,
-        entryType: field === "currentBall" ? "field_change" : "field_change",
+        entryType: "field_change",
         fieldName: field,
         oldValue: String((existing as Record<string, unknown>)[field] ?? ""),
         newValue: String(body[field] ?? ""),
@@ -61,6 +61,7 @@ export async function PATCH(
       name: body.name !== undefined ? body.name : existing.name,
       assignedDeveloper: body.assignedDeveloper !== undefined ? body.assignedDeveloper : existing.assignedDeveloper,
       currentBall: body.currentBall !== undefined ? body.currentBall : existing.currentBall,
+      task: body.task !== undefined ? body.task : existing.task,
     },
     include: { flowStages: true },
   });

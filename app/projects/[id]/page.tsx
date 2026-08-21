@@ -633,12 +633,12 @@ export default function ProjectDetailPage() {
 const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string; source?: { url: string; valueKey: string }; strict?: boolean; filterBy?: string }> = {
   projectId: { type: "text" },
   name: { type: "text" },
-  priority: { type: "combo", configCategory: "priority" },
+  priority: { type: "combo", configCategory: "priority", strict: true },
   scopeDescription: { type: "textarea" },
   initiatedBy: { type: "combo", configCategory: "initiated_by", strict: true },
   requestedByName: { type: "combo", configCategory: "requested_by_name" },
   requestedByDept: { type: "combo", configCategory: "requested_by_dept" },
-  requestType: { type: "combo", configCategory: "request_type" },
+  requestType: { type: "combo", configCategory: "request_type", strict: true },
   pmOfficer: { type: "combo", configCategory: "pm_officer", strict: true },
   systemName: { type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, strict: true },
   specificModule: { type: "combo", source: { url: "/api/directory-entry", valueKey: "module" }, strict: true, filterBy: "systemName" },
@@ -1016,6 +1016,12 @@ function WorkStreamCard({
         </select>
       </div>
 
+      {ws.task && (
+        <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)" }}>
+          <span style={{ fontWeight: 600 }}>Task:</span> {ws.task}
+        </div>
+      )}
+
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
           <thead>
@@ -1050,7 +1056,10 @@ function WorkStreamCard({
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleStageDragEnd}>
                 <SortableContext items={sortedStages.map((s) => String(s.id))} strategy={verticalListSortingStrategy}>
-                  {sortedStages.map((stage) => (
+                  {sortedStages.map((stage) => {
+                    const isCurrentStageRow = ws.currentStage?.id === stage.id;
+                    const showBump = isCurrentStageRow && (bumpMsg || lastBumped);
+                    return (
                     <SortableRow key={stage.id} id={String(stage.id)}>
                       <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
                     {renamingStage === stage.id ? (
@@ -1162,10 +1171,10 @@ function WorkStreamCard({
                     </div>
                   </td>
                   <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {bumpMsg || "—"}
+                    {showBump ? (bumpMsg || "—") : "—"}
                   </td>
                   <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
-                    {lastBumped ? (
+                    {showBump && lastBumped ? (
                       <button
                         onClick={onOpenBumps}
                         title="View all bumps"
@@ -1176,7 +1185,8 @@ function WorkStreamCard({
                     ) : "—"}
                   </td>
                     </SortableRow>
-                  ))}
+                    );
+                  })}
                 </SortableContext>
               </DndContext>
             )}

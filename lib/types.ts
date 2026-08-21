@@ -38,6 +38,7 @@ export interface WorkStreamCreate {
   name?: string;
   assignedDeveloper?: string;
   currentBall?: string;
+  task?: string;
 }
 
 export type WorkStreamUpdate = Partial<Omit<WorkStreamCreate, "projectId">>;
@@ -137,6 +138,7 @@ export interface WorkStreamWithStages {
   name: string | null;
   assignedDeveloper: string | null;
   currentBall: string;
+  task: string | null;
   archived: boolean;
   sortOrder: number;
   createdAt: Date;

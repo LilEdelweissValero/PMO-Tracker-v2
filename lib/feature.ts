@@ -109,6 +109,7 @@ export function buildWorkStreamWithDerived(
     name: string | null;
     assignedDeveloper: string | null;
     currentBall: string;
+    task?: string | null;
     archived: boolean;
     sortOrder: number;
     createdAt: Date;
@@ -118,5 +119,5 @@ export function buildWorkStreamWithDerived(
   templateStages: TemplateStage[]
 ): WorkStreamWithStages {
   const stages = buildStagesWithDerived(ws.flowStages);
-  return { ...ws, flowStages: stages, currentStage: computeTemplateCurrentStage(stages, templateStages) };
+  return { ...ws, task: ws.task ?? null, flowStages: stages, currentStage: computeTemplateCurrentStage(stages, templateStages) };
 }

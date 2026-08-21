@@ -44,6 +44,7 @@ export default function EntityFormModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -53,6 +54,13 @@ export default function EntityFormModal({
     ) as HTMLElement | null;
     first?.focus();
   }, [open]);
+
+  const beforeClose = () => {
+    if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +73,7 @@ export default function EntityFormModal({
         if (field.key in formData) payload[field.key] = formData[field.key];
       }
       await onSubmit(payload);
+      setDirty(false);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -74,11 +83,12 @@ export default function EntityFormModal({
   };
 
   const updateField = (key: string, value: FormValue) => {
+    setDirty(true);
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={title} wide={wide}>
+    <Modal open={open} onClose={onClose} onBeforeClose={beforeClose} title={title} wide={wide}>
       <form ref={formRef} onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
         {fields.map((field) => {
           if (field.hiddenIf?.(formData)) return null;
@@ -167,7 +177,7 @@ export default function EntityFormModal({
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { if (beforeClose()) onClose(); }}
             disabled={submitting}
             style={{
               padding: "7px 12px",

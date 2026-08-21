@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
+  onBeforeClose?: () => boolean;
   title?: string;
   children: React.ReactNode;
   wide?: boolean;
 }
 
-export default function Modal({ open, onClose, title, children, wide }: ModalProps) {
+export default function Modal({ open, onClose, onBeforeClose, title, children, wide }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const handleClose = useCallback(() => {
+    if (onBeforeClose && !onBeforeClose()) return;
+    onClose();
+  }, [onBeforeClose, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
-  }, [open, onClose]);
+  }, [open, handleClose]);
 
   useEffect(() => {
     if (open) {
@@ -36,7 +42,7 @@ export default function Modal({ open, onClose, title, children, wide }: ModalPro
   return (
     <div
       ref={overlayRef}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onClick={(e) => { if (e.target === overlayRef.current) handleClose(); }}
       style={{
         position: "fixed",
         inset: 0,
@@ -80,7 +86,7 @@ export default function Modal({ open, onClose, title, children, wide }: ModalPro
               {title}
             </span>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               style={{
                 background: "none",
                 border: "none",
