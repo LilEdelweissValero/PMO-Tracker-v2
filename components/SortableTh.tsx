@@ -2,6 +2,8 @@
 
 import type { SortState } from "@/lib/useTableSort";
 
+import type { ReactNode } from "react";
+
 interface SortableThProps {
   label: string;
   sort?: SortState | null;
@@ -9,9 +11,10 @@ interface SortableThProps {
   sortKey?: string;
   style?: React.CSSProperties;
   hideArrow?: boolean;
+  action?: ReactNode;
 }
 
-export default function SortableTh({ label, sort, onSort, sortKey, style, hideArrow }: SortableThProps) {
+export default function SortableTh({ label, sort, onSort, sortKey, style, hideArrow, action }: SortableThProps) {
   const sortable = Boolean(onSort && sortKey);
   const active = sortable && sort?.key === sortKey;
 
@@ -33,12 +36,15 @@ export default function SortableTh({ label, sort, onSort, sortKey, style, hideAr
         ...style,
       }}
     >
-      {label}
-      {active && !hideArrow ? (
-        <span style={{ marginLeft: 3, fontSize: "9px" }}>
-          {sort!.direction === "asc" ? "▲" : "▼"}
-        </span>
-      ) : null}
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+        {label}
+        {active && !hideArrow ? (
+          <span style={{ fontSize: "9px" }}>
+            {sort!.direction === "asc" ? "▲" : "▼"}
+          </span>
+        ) : null}
+        {active && action ? action : null}
+      </span>
     </th>
   );
 }

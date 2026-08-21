@@ -59,27 +59,16 @@ export async function createWorkStreamWithStages(params: {
   const changedBy = params.changedBy ?? "System";
   const initialStatus = templateStages[0]?.status ?? "Not Yet Started";
 
-  await prisma.changeLog.createMany({
-    data: [
-      {
-        workStreamId: workStream.id,
-        projectId: params.projectId,
-        entryType: "progress",
-        fieldName: "status",
-        newValue: initialStatus,
-        note: initialStatus,
-        changedBy,
-      },
-      {
-        workStreamId: workStream.id,
-        projectId: params.projectId,
-        entryType: "bump",
-        fieldName: "status",
-        newValue: "Project Management Office",
-        note: initialStatus,
-        changedBy,
-      },
-    ],
+  await prisma.changeLog.create({
+    data: {
+      workStreamId: workStream.id,
+      projectId: params.projectId,
+      entryType: "progress",
+      fieldName: "status",
+      newValue: initialStatus,
+      note: initialStatus,
+      changedBy,
+    },
   });
 
   await logChange({

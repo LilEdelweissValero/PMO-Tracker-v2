@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import EntityFormModal from "@/components/EntityFormModal";
 import SortableTh from "@/components/SortableTh";
-import SaveOrderBar from "@/components/SaveOrderBar";
 import { useColumnSort, type SortAccessor } from "@/lib/useColumnSort";
 import { computeProjectStatus, getStatusColorClass } from "@/lib/feature";
 import { useFlowTemplate } from "@/lib/useFlowTemplate";
@@ -66,7 +65,6 @@ export default function ProjectsPage() {
     toggleSort,
     saveOrder,
     saving,
-    saveError,
   } = useColumnSort(projects, projectAccessors, "project", () => {
     fetchProjects();
     playPing();
@@ -133,7 +131,6 @@ export default function ProjectsPage() {
       </div>
 
       <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-        {sort ? <div style={{ padding: "var(--space-sm) var(--space-md)" }}><SaveOrderBar saving={saving} error={saveError} onSave={saveOrder} /></div> : null}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <thead>
             <tr>
@@ -144,6 +141,29 @@ export default function ProjectsPage() {
                   sort={sort}
                   sortKey={col.key}
                   onSort={toggleSort}
+                  action={sort?.key === col.key ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); saveOrder(); }}
+                      disabled={saving}
+                      style={{
+                        padding: "1px 6px",
+                        border: "1px solid currentColor",
+                        borderRadius: "var(--radius-sm)",
+                        backgroundColor: "transparent",
+                        color: "inherit",
+                        cursor: saving ? "not-allowed" : "pointer",
+                        fontSize: "9px",
+                        fontWeight: 600,
+                        letterSpacing: "0.04em",
+                        fontFamily: "var(--font-sans)",
+                        opacity: saving ? 0.5 : 1,
+                        lineHeight: "14px",
+                        marginLeft: "4px",
+                      }}
+                    >
+                      {saving ? "…" : "SAVE"}
+                    </button>
+                  ) : undefined}
                   style={{
                     backgroundColor: col.zone === "identity" ? "var(--ink-primary)" : "var(--ground-metric)",
                     color: col.zone === "identity" ? "var(--ink-on-dark)" : "var(--ink-primary)",

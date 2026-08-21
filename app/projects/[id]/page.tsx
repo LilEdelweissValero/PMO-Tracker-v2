@@ -2,12 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import DetailHero from "@/components/DetailHero";
 import DatePicker from "@/components/DatePicker";
 import LinkEditor from "@/components/LinkEditor";
 import Modal from "@/components/Modal";
 import EntityFormModal from "@/components/EntityFormModal";
 import BumpModal from "@/components/BumpModal";
+import SortableRow from "@/components/SortableRow";
 import { computeProjectStatus, buildWorkStreamWithDerived, getStatusColorClass } from "@/lib/feature";
 import type { TemplateStage } from "@/lib/feature";
 import { useFlowTemplate } from "@/lib/useFlowTemplate";
@@ -187,27 +203,16 @@ export default function ProjectDetailPage() {
     showToast("Stage deleted");
   };
 
-  const reorderStage = async (wsId: number, stageId: number, direction: "up" | "down") => {
-    const ws = project?.workStreams.find((w) => w.id === wsId);
-    if (!ws) return;
-    const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
-    const idx = sorted.findIndex((s) => s.id === stageId);
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
-    const a = sorted[idx];
-    const b = sorted[swapIdx];
-    await Promise.all([
-      fetch(`/api/flow-stage/${a.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderIdx: b.orderIdx }),
-      }),
-      fetch(`/api/flow-stage/${b.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderIdx: a.orderIdx }),
-      }),
-    ]);
+  const reorderStages = async (wsId: number, orderedIds: number[]) => {
+    await Promise.all(
+      orderedIds.map((id, idx) =>
+        fetch(`/api/flow-stage/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderIdx: idx }),
+        })
+      )
+    );
     refetch();
   };
 
@@ -399,7 +404,7 @@ export default function ProjectDetailPage() {
             onUpdateDeveloper={(dev) => updateWorkStream(ws.id, { assignedDeveloper: dev })}
             onUpdateBall={(ball) => updateWorkStream(ws.id, { currentBall: ball })}
             onUpdateStage={(stageId, data) => updateStage(stageId, data)}
-            onReorderStage={(stageId, direction) => reorderStage(ws.id, stageId, direction)}
+            onReorderStages={(orderedIds) => reorderStages(ws.id, orderedIds)}
             onDeleteStage={deleteStage}
             onAddStage={() => { playPrompt(); setAddStageWsId(ws.id); }}
             onBump={() => { playPrompt(); setBumpWsId(ws.id); }}
@@ -676,6 +681,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function FieldRow({ label, value, onEdit, multiline, large }: { label: string; value: string | null; onEdit: () => void; multiline?: boolean; large?: boolean }) {
+  const [hovered, setHovered] = useState(false);
+
   if (large) {
     return (
       <div
@@ -687,25 +694,12 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
           borderBottom: "1px solid var(--rule)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "13px", color: "var(--ink-secondary)", flexShrink: 0 }}>{label}</span>
-          <button
-            onClick={onEdit}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--accent)",
-              cursor: "pointer",
-              fontSize: "11px",
-              padding: "2px 4px",
-              flexShrink: 0,
-            }}
-          >
-            Edit
-          </button>
-        </div>
+        <span style={{ fontSize: "13px", color: "var(--ink-secondary)" }}>{label}</span>
         <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           style={{
+            position: "relative",
             fontSize: "14px",
             lineHeight: 1.55,
             color: value ? "var(--ink-primary)" : "var(--ink-tertiary)",
@@ -718,6 +712,26 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
           }}
         >
           {value || "—"}
+          <button
+            onClick={onEdit}
+            title="Edit"
+            style={{
+              position: "absolute",
+              top: "6px",
+              right: "6px",
+              background: "none",
+              border: "none",
+              color: "var(--accent)",
+              cursor: "pointer",
+              fontSize: "13px",
+              padding: "2px 4px",
+              lineHeight: 1,
+              opacity: hovered ? 1 : 0,
+              transition: "opacity 0.15s",
+            }}
+          >
+            ✎
+          </button>
         </div>
       </div>
     );
@@ -735,23 +749,31 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
       }}
     >
       <span style={{ fontSize: "13px", color: "var(--ink-secondary)", flexShrink: 0 }}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1, justifyContent: "flex-end" }}>
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1, justifyContent: "flex-end", position: "relative" }}
+      >
         <span style={{ fontSize: "13px", color: value ? "var(--ink-primary)" : "var(--ink-tertiary)", textAlign: "right" }}>
           {value || "—"}
         </span>
         <button
           onClick={onEdit}
+          title="Edit"
           style={{
             background: "none",
             border: "none",
             color: "var(--accent)",
             cursor: "pointer",
-            fontSize: "11px",
+            fontSize: "13px",
             padding: "2px 4px",
             flexShrink: 0,
+            lineHeight: 1,
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.15s",
           }}
         >
-          Edit
+          ✎
         </button>
       </div>
     </div>
@@ -769,7 +791,7 @@ function WorkStreamCard({
   onUpdateDeveloper,
   onUpdateBall,
   onUpdateStage,
-  onReorderStage,
+  onReorderStages,
   onDeleteStage,
   onAddStage,
   onBump,
@@ -785,7 +807,7 @@ function WorkStreamCard({
   onUpdateDeveloper: (developer: string | null) => void;
   onUpdateBall: (ball: string) => void;
   onUpdateStage: (stageId: number, data: Record<string, string | number | null>) => void;
-  onReorderStage: (stageId: number, direction: "up" | "down") => void;
+  onReorderStages: (orderedIds: number[]) => void;
   onDeleteStage: (stageId: number) => void;
   onAddStage: () => void;
   onBump: () => void;
@@ -817,6 +839,21 @@ function WorkStreamCard({
     const trimmed = nameValue.trim();
     if (trimmed && trimmed !== ws.name) onUpdateName(trimmed);
     setEditingName(false);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleStageDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedStages.findIndex((s) => String(s.id) === active.id);
+    const newIndex = sortedStages.findIndex((s) => String(s.id) === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(sortedStages, oldIndex, newIndex);
+    onReorderStages(reordered.map((s) => s.id));
   };
 
   const commitStageName = (stageId: number) => {
@@ -983,7 +1020,7 @@ function WorkStreamCard({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
           <thead>
             <tr>
-              {["⇅", "Stage", "Planned", "Actual", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
+              {["Stage", "Planned", "Actual", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -1006,32 +1043,16 @@ function WorkStreamCard({
           <tbody>
             {sortedStages.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                <td colSpan={7} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                   No stages yet
                 </td>
               </tr>
             ) : (
-              sortedStages.map((stage, idx) => (
-                <tr key={stage.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                  <td style={{ padding: "4px 6px", whiteSpace: "nowrap", verticalAlign: "middle" }}>
-                    <button
-                      onClick={() => onReorderStage(stage.id, "up")}
-                      disabled={idx === 0}
-                      title="Move up"
-                      style={{ background: "none", border: "none", cursor: idx === 0 ? "default" : "pointer", color: idx === 0 ? "var(--ink-tertiary)" : "var(--accent)", fontSize: "11px", padding: "0 2px", opacity: idx === 0 ? 0.4 : 1 }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => onReorderStage(stage.id, "down")}
-                      disabled={idx === sortedStages.length - 1}
-                      title="Move down"
-                      style={{ background: "none", border: "none", cursor: idx === sortedStages.length - 1 ? "default" : "pointer", color: idx === sortedStages.length - 1 ? "var(--ink-tertiary)" : "var(--accent)", fontSize: "11px", padding: "0 2px", opacity: idx === sortedStages.length - 1 ? 0.4 : 1 }}
-                    >
-                      ▼
-                    </button>
-                  </td>
-                  <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleStageDragEnd}>
+                <SortableContext items={sortedStages.map((s) => String(s.id))} strategy={verticalListSortingStrategy}>
+                  {sortedStages.map((stage) => (
+                    <SortableRow key={stage.id} id={String(stage.id)}>
+                      <td style={{ padding: "6px 8px", fontWeight: stage.actualDate ? 600 : 400 }}>
                     {renamingStage === stage.id ? (
                       <input
                         autoFocus
@@ -1154,8 +1175,10 @@ function WorkStreamCard({
                       </button>
                     ) : "—"}
                   </td>
-                </tr>
-              ))
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </tbody>
         </table>
