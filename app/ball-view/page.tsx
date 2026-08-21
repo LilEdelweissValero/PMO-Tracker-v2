@@ -68,14 +68,14 @@ function BallTable({ title, entries }: { title: string; entries: LatestEntry[] }
                     </Link>
                   </td>
                   <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{entry.workStreamName || "—"}</td>
-                  <td style={{ padding: "8px 10px", width: "100%" }}>
+                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                     <div style={{ fontWeight: 500 }}>{entry.currentStage || "—"}</div>
                     <div style={{ marginTop: "3px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--ink-tertiary)" }}>
                       <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "var(--ink-tertiary)", flexShrink: 0 }} />
                       {entry.ballPerson || "—"}
                     </div>
                   </td>
-                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
+                  <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums", textAlign: "right", whiteSpace: "nowrap" }}>
                     {entry.duration || "—"}
                   </td>
                 </tr>

@@ -968,19 +968,6 @@ function WorkStreamCard({
           </span>
         </div>
         <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center", flexWrap: "wrap" }}>
-          <span
-            style={{
-              padding: "4px 8px",
-              border: "1px solid var(--rule)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "12px",
-              fontFamily: "var(--font-sans)",
-              backgroundColor: "var(--surface)",
-              color: "var(--ink-secondary)",
-            }}
-          >
-            {ws.currentBall}
-          </span>
           <button
             onClick={onBump}
             style={{
