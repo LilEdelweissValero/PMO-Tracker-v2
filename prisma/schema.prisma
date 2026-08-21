@@ -140,18 +140,7 @@ model SystemModuleEntry {
   @@map("system_module_entries")
 }
 
-model DirectoryDepartment {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  details   String?
-  archived  Boolean  @default(false)
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([sortOrder])
-  @@map("directory_departments")
-}
 
 model ConfigValue {
   id        Int      @id @default(autoincrement())
@@ -170,16 +159,17 @@ model ConfigValue {
   @@map("config_values")
 }
 
-model UnitInvolved {
-  id        Int      @id @default(autoincrement())
-  group     String
-  name      String
-  sortOrder Int      @default(0) @map("sort_order")
-  archived  Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+model DirectoryPersonnel {
+  id         Int      @id @default(autoincrement())
+  group      String
+  name       String
+  department String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  archived   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@index([group])
   @@index([sortOrder])
-  @@map("unit_involved")
+  @@map("directory_personnel")
 }

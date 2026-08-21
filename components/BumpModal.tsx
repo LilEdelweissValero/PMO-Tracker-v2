@@ -8,7 +8,7 @@ import type { TemplateStage } from "@/lib/feature";
 import { formatDuration } from "@/lib/duration";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { UnitInvolved, WorkStreamWithStages } from "@/lib/types";
+import type { DirectoryPersonnel, WorkStreamWithStages } from "@/lib/types";
 
 const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
@@ -83,7 +83,7 @@ function YesNoToggle({
 
 export default function BumpModal({ open, projectId, workStreamIds, onClose, onSaved }: BumpModalProps) {
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
-  const [units, setUnits] = useState<UnitInvolved[]>([]);
+  const [units, setUnits] = useState<DirectoryPersonnel[]>([]);
   const [workStreams, setWorkStreams] = useState<WorkStreamWithStages[]>([]);
 
   const [selectedWsIds, setSelectedWsIds] = useState<number[]>([]);
@@ -113,7 +113,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
       fetch("/api/config-value?category=ball_groups")
         .then((r) => r.json())
         .catch(() => []),
-      fetch("/api/unit-involved")
+      fetch("/api/directory-personnel")
         .then((r) => r.json())
         .catch(() => []),
       fetch("/api/config-value?category=flow_template")
@@ -148,7 +148,7 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
           .filter((v) => v.trim());
         const resolvedGroups = groups.length ? groups : FALLBACK_BALL_GROUPS;
         setBallGroups(resolvedGroups);
-        setUnits(unitData as UnitInvolved[]);
+        setUnits(unitData as DirectoryPersonnel[]);
 
         const initial = (workStreamIdsRef.current as number[]).filter((id) =>
           streams.some((w) => w.id === id)

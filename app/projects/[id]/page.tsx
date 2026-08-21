@@ -29,7 +29,7 @@ import type { TemplateStage } from "@/lib/feature";
 import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, UnitInvolved, FormValue } from "@/lib/types";
+import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, DirectoryPersonnel, FormValue } from "@/lib/types";
 
 const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
@@ -45,7 +45,7 @@ export default function ProjectDetailPage() {
   const [systemsTableHovered, setSystemsTableHovered] = useState(false);
   const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [ballGroupAcronymMap, setBallGroupAcronymMap] = useState<Map<string, string>>(new Map());
-  const [units, setUnits] = useState<UnitInvolved[]>([]);
+  const [units, setUnits] = useState<DirectoryPersonnel[]>([]);
   const [bumpWsId, setBumpWsId] = useState<number | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
@@ -68,10 +68,10 @@ export default function ProjectDetailPage() {
         }
       })
       .catch(() => {});
-    fetch("/api/unit-involved")
+    fetch("/api/directory-personnel")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setUnits(data as UnitInvolved[]);
+        if (!cancelled) setUnits(data as DirectoryPersonnel[]);
       })
       .catch(() => {});
     fetch("/api/config-value?category=project_status")
@@ -587,7 +587,7 @@ export default function ProjectDetailPage() {
         fields={[
           { key: "name", label: "Work Stream Name" },
           { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
-          { key: "ballHolder", label: "Initial Ball Holder", type: "combo", source: { url: "/api/unit-involved", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true },
+          { key: "ballHolder", label: "Initial Ball Holder", type: "combo", source: { url: "/api/directory-personnel", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true },
           { key: "initialTask", label: "Initial Task" },
         ]}
         onSubmit={addWorkStream}
@@ -833,7 +833,7 @@ function WorkStreamCard({
   ws: WorkStreamWithStages;
   ballGroups: string[];
   ballGroupAcronymMap: Map<string, string>;
-  units: UnitInvolved[];
+  units: DirectoryPersonnel[];
   templateStages: TemplateStage[];
   projectStatuses: { value: string }[];
   onUpdateName: (name: string) => void;

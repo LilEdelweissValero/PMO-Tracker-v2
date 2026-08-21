@@ -4,8 +4,7 @@ import { prisma } from "@/lib/db";
 const TABLE_BY_ENTITY: Record<string, string> = {
   project: "projects",
   "directory-entry": "system_module_entries",
-  "directory-department": "directory_departments",
-  "unit-involved": "unit_involved",
+  "directory-personnel": "directory_personnel",
   "config-value": "config_values",
 };
 

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const where: Record<string, unknown> = { archived: false };
   if (group) where.group = group;
 
-  const entries = await prisma.unitInvolved.findMany({
+  const entries = await prisma.directoryPersonnel.findMany({
     where,
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   });
@@ -20,22 +20,24 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const group = typeof body.group === "string" ? body.group.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
+  const department = typeof body.department === "string" ? body.department.trim() || null : null;
 
   if (!group || !name) {
     return NextResponse.json({ error: "group and name are required" }, { status: 400 });
   }
 
-  const existing = await prisma.unitInvolved.findFirst({
+  const existing = await prisma.directoryPersonnel.findFirst({
     where: { group, name, archived: false },
   });
   if (existing) {
     return NextResponse.json({ error: "This name already exists in the group" }, { status: 409 });
   }
 
-  const entry = await prisma.unitInvolved.create({
+  const entry = await prisma.directoryPersonnel.create({
     data: {
       group,
       name,
+      department,
       sortOrder: body.sortOrder ?? 0,
     },
   });

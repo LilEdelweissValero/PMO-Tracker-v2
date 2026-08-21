@@ -254,7 +254,7 @@ export default function ComboField({
         </div>
       )}
       {isInvalidStrict && (
-        <div style={{ fontSize: "11px", color: "var(--health-atrisk-ink)", marginTop: "4px" }}>
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, fontSize: "11px", color: "var(--health-atrisk-ink)", marginTop: "4px", zIndex: 51 }}>
           Must select from the list only.
         </div>
       )}

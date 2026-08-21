@@ -1,25 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ComboField, { inputStyle } from "@/components/ComboField";
 import SortableTh from "@/components/SortableTh";
 import SaveOrderBar from "@/components/SaveOrderBar";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import { useColumnSort, type SortAccessor, type SortState } from "@/lib/useColumnSort";
-import type { SystemModuleEntry, UnitInvolved } from "@/lib/types";
-
-interface DepartmentItem {
-  id: number;
-  name: string;
-  details: string | null;
-}
+import type { SystemModuleEntry, DirectoryPersonnel } from "@/lib/types";
 
 interface SortableColumn {
   key: string;
   label: string;
   sortable?: boolean;
 }
+
+const personnelColumns: SortableColumn[] = [
+  { key: "group", label: "Group" },
+  { key: "name", label: "Name" },
+  { key: "department", label: "Department" },
+  { key: "projectsInvolved", label: "Projects Involved", sortable: false },
+  { key: "actions", label: "Actions", sortable: false },
+];
 
 const entryColumns: SortableColumn[] = [
   { key: "system", label: "System" },
@@ -32,17 +34,11 @@ const entryColumns: SortableColumn[] = [
   { key: "actions", label: "Actions", sortable: false },
 ];
 
-const deptColumns: SortableColumn[] = [
-  { key: "name", label: "Name" },
-  { key: "details", label: "Details" },
-  { key: "actions", label: "Actions", sortable: false },
-];
-
-const unitColumns: SortableColumn[] = [
-  { key: "group", label: "Group" },
-  { key: "name", label: "Name" },
-  { key: "actions", label: "Actions", sortable: false },
-];
+const personnelAccessors: Record<string, SortAccessor<DirectoryPersonnel>> = {
+  group: (p) => p.group,
+  name: (p) => p.name,
+  department: (p) => p.department,
+};
 
 const entryAccessors: Record<string, SortAccessor<SystemModuleEntry>> = {
   system: (e) => e.system,
@@ -53,26 +49,20 @@ const entryAccessors: Record<string, SortAccessor<SystemModuleEntry>> = {
   systemOwnerDept: (e) => e.systemOwnerDept,
 };
 
-const deptAccessors: Record<string, SortAccessor<DepartmentItem>> = {
-  name: (d) => d.name,
-  details: (d) => d.details,
-};
-
-const unitAccessors: Record<string, SortAccessor<UnitInvolved>> = {
-  group: (u) => u.group,
-  name: (u) => u.name,
-};
-
 const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
 
-const DEVELOPER_SOURCE = { url: "/api/unit-involved?group=Developers", valueKey: "name" };
-const OWNER_SOURCE = { url: `/api/unit-involved?group=${encodeURIComponent("Business Unit")}`, valueKey: "name" };
+const DEVELOPER_SOURCE = { url: "/api/directory-personnel?group=Developers", valueKey: "name" };
+const OWNER_SOURCE = { url: `/api/directory-personnel?group=${encodeURIComponent("Business Unit")}`, valueKey: "name" };
+
+interface ProjectInvolvement {
+  open: number;
+  closed: number;
+}
 
 export default function DirectoryPage() {
-  const [tab, setTab] = useState<"systems" | "departments" | "units">("systems");
+  const [tab, setTab] = useState<"personnel" | "systems">("personnel");
   const [entries, setEntries] = useState<SystemModuleEntry[]>([]);
-  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
-  const [units, setUnits] = useState<UnitInvolved[]>([]);
+  const [personnel, setPersonnel] = useState<DirectoryPersonnel[]>([]);
   const [unitGroups, setUnitGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [loading, setLoading] = useState(true);
   const [entriesVersion, setEntriesVersion] = useState(0);
@@ -85,8 +75,6 @@ export default function DirectoryPage() {
   const [newOwnerName, setNewOwnerName] = useState("");
   const [newOwnerDept, setNewOwnerDept] = useState("");
 
-  const [newName, setNewName] = useState("");
-  const [newDetails, setNewDetails] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editSystem, setEditSystem] = useState("");
   const [editAcronym, setEditAcronym] = useState("");
@@ -95,29 +83,27 @@ export default function DirectoryPage() {
   const [editDeveloper, setEditDeveloper] = useState("");
   const [editOwnerName, setEditOwnerName] = useState("");
   const [editOwnerDept, setEditOwnerDept] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editDetails, setEditDetails] = useState("");
 
-  const [newUnitGroup, setNewUnitGroup] = useState("");
-  const [newUnitName, setNewUnitName] = useState("");
-  const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
-  const [editUnitGroup, setEditUnitGroup] = useState("");
-  const [editUnitName, setEditUnitName] = useState("");
+  const [newPersonGroup, setNewPersonGroup] = useState("");
+  const [newPersonName, setNewPersonName] = useState("");
+  const [newPersonDept, setNewPersonDept] = useState("");
+  const [editingPersonId, setEditingPersonId] = useState<number | null>(null);
+  const [editPersonGroup, setEditPersonGroup] = useState("");
+  const [editPersonName, setEditPersonName] = useState("");
+  const [editPersonDept, setEditPersonDept] = useState("");
   const [groupAcronymMap, setGroupAcronymMap] = useState<Map<string, string>>(new Map());
 
   const fetchAll = async () => {
-    const [entryRes, deptRes, unitRes, configRes] = await Promise.all([
+    const [entryRes, personRes, configRes] = await Promise.all([
       fetch("/api/directory-entry"),
-      fetch("/api/directory-department"),
-      fetch("/api/unit-involved"),
+      fetch("/api/directory-personnel"),
       fetch("/api/config-value?category=ball_groups"),
     ]);
     if (entryRes.ok) {
       setEntries(await entryRes.json());
       setEntriesVersion((v) => v + 1);
     }
-    if (deptRes.ok) setDepartments(await deptRes.json());
-    if (unitRes.ok) setUnits(await unitRes.json());
+    if (personRes.ok) setPersonnel(await personRes.json());
     if (configRes.ok) {
       const configData = await configRes.json() as { value: string; acronym?: string | null }[];
       const groups = configData.map((c) => c.value).filter((v) => v.trim());
@@ -131,17 +117,15 @@ export default function DirectoryPage() {
     let cancelled = false;
     Promise.all([
       fetch("/api/directory-entry").then((r) => r.json()),
-      fetch("/api/directory-department").then((r) => r.json()),
-      fetch("/api/unit-involved").then((r) => r.json()),
+      fetch("/api/directory-personnel").then((r) => r.json()),
       fetch("/api/config-value?category=ball_groups")
         .then((r) => r.json())
         .catch(() => [] as { value: string; acronym?: string | null }[]),
     ])
-      .then(([e, d, u, config]) => {
+      .then(([e, p, config]) => {
         if (!cancelled) {
           setEntries(e);
-          setDepartments(d);
-          setUnits(u);
+          setPersonnel(p);
           const groups = (config as { value: string; acronym?: string | null }[])
             .map((c) => c.value)
             .filter((v) => v.trim());
@@ -156,17 +140,46 @@ export default function DirectoryPage() {
     return () => { cancelled = true; };
   }, []);
 
+  const [allProjects, setAllProjects] = useState<{ signoffStatus: string; systemOwnerName: string | null; requestedByName: string | null; workStreams: { assignedDeveloper: string | null }[] }[]>([]);
+
+  useEffect(() => {
+    if (tab !== "personnel") return;
+    let cancelled = false;
+    fetch("/api/project")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setAllProjects(data as typeof allProjects);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tab]);
+
+  const projectInvolvement = useMemo(() => {
+    const map = new Map<string, ProjectInvolvement>();
+    for (const proj of allProjects) {
+      const names = new Set<string>();
+      if (proj.systemOwnerName) names.add(proj.systemOwnerName);
+      if (proj.requestedByName) names.add(proj.requestedByName);
+      for (const ws of proj.workStreams) {
+        if (ws.assignedDeveloper) names.add(ws.assignedDeveloper);
+      }
+      const isOpen = proj.signoffStatus !== "signed_off";
+      for (const name of names) {
+        const existing = map.get(name) ?? { open: 0, closed: 0 };
+        if (isOpen) existing.open++;
+        else existing.closed++;
+        map.set(name, existing);
+      }
+    }
+    return map;
+  }, [allProjects]);
+
+  const personnelSort = useColumnSort(personnel, personnelAccessors, "directory-personnel", () => {
+    fetchAll();
+    playPing();
+    showToast("Order saved");
+  });
   const entriesSort = useColumnSort(entries, entryAccessors, "directory-entry", () => {
-    fetchAll();
-    playPing();
-    showToast("Order saved");
-  });
-  const deptsSort = useColumnSort(departments, deptAccessors, "directory-department", () => {
-    fetchAll();
-    playPing();
-    showToast("Order saved");
-  });
-  const unitsSort = useColumnSort(units, unitAccessors, "unit-involved", () => {
     fetchAll();
     playPing();
     showToast("Order saved");
@@ -236,79 +249,47 @@ export default function DirectoryPage() {
     showToast("Entry deleted");
   };
 
-  const addDepartment = async () => {
-    if (!newName.trim()) return;
-    await fetch("/api/directory-department", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), details: newDetails.trim() || null }),
-    });
-    setNewName("");
-    setNewDetails("");
-    fetchAll();
-    playPing();
-    showToast("Entry added");
-  };
-
-  const updateDepartment = async (id: number) => {
-    await fetch(`/api/directory-department/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName, details: editDetails || null }),
-    });
-    setEditingId(null);
-    fetchAll();
-    playPing();
-    showToast("Entry updated");
-  };
-
-  const deleteDepartment = async (id: number) => {
-    await fetch(`/api/directory-department/${id}`, { method: "DELETE" });
-    fetchAll();
-    playPing();
-    showToast("Entry deleted");
-  };
-
-  const addUnit = async () => {
-    const group = (newUnitGroup || unitGroups[0] || "").trim();
-    const name = newUnitName.trim();
+  const addPerson = async () => {
+    const group = (newPersonGroup || unitGroups[0] || "").trim();
+    const name = newPersonName.trim();
     if (!group || !name) return;
-    const res = await fetch("/api/unit-involved", {
+    const res = await fetch("/api/directory-personnel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group, name }),
+      body: JSON.stringify({ group, name, department: newPersonDept.trim() || null }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       showToast(body?.error ?? "Failed to add entry");
       return;
     }
-    setNewUnitName("");
-    setNewUnitGroup("");
+    setNewPersonName("");
+    setNewPersonGroup("");
+    setNewPersonDept("");
     fetchAll();
     playPing();
     showToast("Entry added");
   };
 
-  const updateUnit = async (id: number) => {
-    const res = await fetch(`/api/unit-involved/${id}`, {
+  const updatePerson = async (id: number) => {
+    const res = await fetch(`/api/directory-personnel/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: editUnitGroup, name: editUnitName }),
+      body: JSON.stringify({ group: editPersonGroup, name: editPersonName, department: editPersonDept || null }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       showToast(body?.error ?? "Failed to update entry");
       return;
     }
-    setEditingUnitId(null);
+    setEditingPersonId(null);
     fetchAll();
     playPing();
     showToast("Entry updated");
   };
 
-  const deleteUnit = async (id: number) => {
-    await fetch(`/api/unit-involved/${id}`, { method: "DELETE" });
+  const deletePerson = async (id: number) => {
+    await fetch(`/api/directory-personnel/${id}`, { method: "DELETE" });
     fetchAll();
     playPing();
     showToast("Entry deleted");
@@ -340,9 +321,8 @@ export default function DirectoryPage() {
 
       <div style={{ display: "flex", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
         {([
+          { key: "personnel", label: "Personnel" },
           { key: "systems", label: "Systems" },
-          { key: "departments", label: "Departments" },
-          { key: "units", label: "Units Involved" },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -364,7 +344,169 @@ export default function DirectoryPage() {
         ))}
       </div>
 
-      {tab === "systems" ? (
+      {tab === "personnel" ? (
+        <>
+          <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
+            <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
+            <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Group</span>
+                <select
+                  value={newPersonGroup || unitGroups[0] || ""}
+                  onChange={(e) => setNewPersonGroup(e.target.value)}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+                >
+                  {unitGroups.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 240px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Name *</span>
+                <input
+                  type="text"
+                  value={newPersonName}
+                  onChange={(e) => setNewPersonName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addPerson(); }}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+              <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Department</span>
+                <input
+                  type="text"
+                  value={newPersonDept}
+                  onChange={(e) => setNewPersonDept(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addPerson(); }}
+                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+              <button
+                onClick={addPerson}
+                disabled={!newPersonName.trim()}
+                style={{
+                  padding: "7px 12px",
+                  border: "none",
+                  borderRadius: "var(--radius-md)",
+                  backgroundColor: "var(--accent)",
+                  color: "#FFFFFF",
+                  cursor: newPersonName.trim() ? "pointer" : "not-allowed",
+                  fontSize: "13px",
+                  fontFamily: "var(--font-sans)",
+                  opacity: newPersonName.trim() ? 1 : 0.5,
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
+          ) : (
+            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              {personnelSort.sort ? (
+                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
+                  <SaveOrderBar saving={personnelSort.saving} error={personnelSort.saveError} onSave={personnelSort.saveOrder} />
+                </div>
+              ) : null}
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  {renderTableHeader(personnelColumns, personnelSort.sort, personnelSort.toggleSort)}
+                </thead>
+                <tbody>
+                  {personnelSort.sortedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={personnelColumns.length} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                        No items
+                      </td>
+                    </tr>
+                  ) : (
+                    personnelSort.sortedRows.map((item) => {
+                      const involvement = projectInvolvement.get(item.name);
+                      return (
+                        <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                          <td style={{ padding: "8px 10px" }}>
+                            {editingPersonId === item.id ? (
+                              <select
+                                value={editPersonGroup || unitGroups[0] || ""}
+                                onChange={(e) => setEditPersonGroup(e.target.value)}
+                                style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
+                              >
+                                {unitGroups.map((g) => (
+                                  <option key={g} value={g}>{g}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span title={item.group}>{groupAcronymMap.get(item.group) || item.group}</span>
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px" }}>
+                            {editingPersonId === item.id ? (
+                              <input
+                                type="text"
+                                value={editPersonName}
+                                onChange={(e) => setEditPersonName(e.target.value)}
+                                style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
+                              />
+                            ) : (
+                              item.name
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                            {editingPersonId === item.id ? (
+                              <input
+                                type="text"
+                                value={editPersonDept ?? ""}
+                                onChange={(e) => setEditPersonDept(e.target.value)}
+                                style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }}
+                              />
+                            ) : (
+                              item.department || "—"
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontSize: "12px" }}>
+                            {involvement ? (
+                              <span>
+                                OPEN: {involvement.open}, CLOSED: {involvement.closed}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px" }}>
+                            {editingPersonId === item.id ? (
+                              <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                                <button onClick={() => updatePerson(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
+                                <button onClick={() => setEditingPersonId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                                <button
+                                  onClick={() => { setEditingPersonId(item.id); setEditPersonGroup(item.group); setEditPersonName(item.name); setEditPersonDept(item.department ?? ""); }}
+                                  style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deletePerson(item.id)}
+                                  style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : (
         <>
           <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
             <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
@@ -551,251 +693,6 @@ export default function DirectoryPage() {
                               </button>
                               <button
                                 onClick={() => deleteEntry(entry.id)}
-                                style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      ) : tab === "departments" ? (
-        <>
-          <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
-            <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
-            <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "flex-end" }}>
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Name"
-                style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", fontFamily: "var(--font-sans)", outline: "none" }}
-              />
-              <input
-                type="text"
-                value={newDetails}
-                onChange={(e) => setNewDetails(e.target.value)}
-                placeholder="Details (optional)"
-                style={{ flex: 2, padding: "6px 10px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", fontFamily: "var(--font-sans)", outline: "none" }}
-              />
-              <button
-                onClick={addDepartment}
-                disabled={!newName.trim()}
-                style={{
-                  padding: "7px 12px",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--accent)",
-                  color: "#FFFFFF",
-                  cursor: newName.trim() ? "pointer" : "not-allowed",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  opacity: newName.trim() ? 1 : 0.5,
-                }}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          {loading ? (
-            <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
-          ) : (
-            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-              {deptsSort.sort ? (
-                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
-                  <SaveOrderBar saving={deptsSort.saving} error={deptsSort.saveError} onSave={deptsSort.saveOrder} />
-                </div>
-              ) : null}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  {renderTableHeader(deptColumns, deptsSort.sort, deptsSort.toggleSort)}
-                </thead>
-                <tbody>
-                  {deptsSort.sortedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
-                        No items
-                      </td>
-                    </tr>
-                  ) : (
-                    deptsSort.sortedRows.map((item) => (
-                      <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                        <td style={{ padding: "8px 10px" }}>
-                          {editingId === item.id ? (
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
-                            />
-                          ) : (
-                            item.name
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
-                          {editingId === item.id ? (
-                            <input
-                              type="text"
-                              value={editDetails ?? ""}
-                              onChange={(e) => setEditDetails(e.target.value)}
-                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }}
-                            />
-                          ) : (
-                            item.details || "—"
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          {editingId === item.id ? (
-                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button onClick={() => updateDepartment(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
-                              <button onClick={() => setEditingId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button
-                                onClick={() => { setEditingId(item.id); setEditName(item.name); setEditDetails(item.details ?? ""); }}
-                                style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteDepartment(item.id)}
-                                style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", padding: "var(--space-md)", marginBottom: "var(--space-md)" }}>
-            <div className="label-caps" style={{ marginBottom: "var(--space-sm)", color: "var(--ink-tertiary)" }}>Add New</div>
-            <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "flex-end" }}>
-              <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Group</span>
-                <select
-                  value={newUnitGroup || unitGroups[0] || ""}
-                  onChange={(e) => setNewUnitGroup(e.target.value)}
-                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
-                >
-                  {unitGroups.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: "1 1 240px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Name *</span>
-                <input
-                  type="text"
-                  value={newUnitName}
-                  onChange={(e) => setNewUnitName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") addUnit(); }}
-                  style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
-                />
-              </div>
-              <button
-                onClick={addUnit}
-                disabled={!newUnitName.trim()}
-                style={{
-                  padding: "7px 12px",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  backgroundColor: "var(--accent)",
-                  color: "#FFFFFF",
-                  cursor: newUnitName.trim() ? "pointer" : "not-allowed",
-                  fontSize: "13px",
-                  fontFamily: "var(--font-sans)",
-                  opacity: newUnitName.trim() ? 1 : 0.5,
-                }}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          {loading ? (
-            <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
-          ) : (
-            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-              {unitsSort.sort ? (
-                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
-                  <SaveOrderBar saving={unitsSort.saving} error={unitsSort.saveError} onSave={unitsSort.saveOrder} />
-                </div>
-              ) : null}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  {renderTableHeader(unitColumns, unitsSort.sort, unitsSort.toggleSort)}
-                </thead>
-                <tbody>
-                  {unitsSort.sortedRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
-                        No items
-                      </td>
-                    </tr>
-                  ) : (
-                    unitsSort.sortedRows.map((item) => (
-                      <tr key={item.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                        <td style={{ padding: "8px 10px" }}>
-                          {editingUnitId === item.id ? (
-                            <select
-                              value={editUnitGroup || unitGroups[0] || ""}
-                              onChange={(e) => setEditUnitGroup(e.target.value)}
-                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
-                            >
-                              {unitGroups.map((g) => (
-                                <option key={g} value={g}>{g}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span title={item.group}>{groupAcronymMap.get(item.group) || item.group}</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          {editingUnitId === item.id ? (
-                            <input
-                              type="text"
-                              value={editUnitName}
-                              onChange={(e) => setEditUnitName(e.target.value)}
-                              style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }}
-                            />
-                          ) : (
-                            item.name
-                          )}
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          {editingUnitId === item.id ? (
-                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button onClick={() => updateUnit(item.id)} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}>Save</button>
-                              <button onClick={() => setEditingUnitId(null)} style={{ background: "none", border: "none", color: "var(--ink-tertiary)", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
-                            </div>
-                          ) : (
-                            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
-                              <button
-                                onClick={() => { setEditingUnitId(item.id); setEditUnitGroup(item.group); setEditUnitName(item.name); }}
-                                style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteUnit(item.id)}
                                 style={{ background: "none", border: "none", color: "var(--health-atrisk-ink)", cursor: "pointer", fontSize: "12px" }}
                               >
                                 Delete

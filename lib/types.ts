@@ -78,11 +78,6 @@ export interface ChangeLogEntry {
   bumpDate: Date | null;
 }
 
-export interface DirectoryCreate {
-  name: string;
-  details?: string;
-}
-
 export interface SystemModuleEntry {
   id: number;
   system: string;
@@ -107,10 +102,11 @@ export interface SystemAffected {
   systemOwnerDept: string | null;
 }
 
-export interface UnitInvolved {
+export interface DirectoryPersonnel {
   id: number;
   group: string;
   name: string;
+  department: string | null;
   sortOrder: number;
   archived: boolean;
 }
