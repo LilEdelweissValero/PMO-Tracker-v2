@@ -233,6 +233,7 @@ export default function ProjectsPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         title="New Project"
+        initialData={showCreate ? { currentStage: templateStages[0]?.name ?? "" } : undefined}
         fields={[
           { key: "projectId", label: "ID", required: true },
           { key: "name", label: "Project Name", required: true },
@@ -245,9 +246,10 @@ export default function ProjectsPage() {
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true, strict: true },
           { key: "_divider1", label: "", type: "divider", dividerLabel: "Ball Setup" },
           { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
-          { key: "ballPerson", label: "Initial Ball Holder", type: "combo", source: { url: "/api/directory-personnel", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true },
+          { key: "ballPerson", label: "Initial Ball Holder", type: "combo", source: { url: "/api/directory-personnel", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true, required: true },
           { key: "currentTask", label: "Current Task", required: true },
-          { key: "currentStage", label: "Current Stage", type: "combo", configCategory: "flow_template" },
+          { key: "currentStage", label: "Current Stage", type: "combo", configCategory: "flow_template", required: true },
+          { key: "remarks", label: "Remarks", type: "textarea" },
         ]}
         onSubmit={handleCreate}
       />

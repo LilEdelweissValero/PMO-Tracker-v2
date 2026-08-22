@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
         task: body.currentTask || null,
         firstStage: body.currentStage || null,
         changedBy: body.changedBy ?? "System",
+        remarks: body.remarks || null,
       });
     }
 

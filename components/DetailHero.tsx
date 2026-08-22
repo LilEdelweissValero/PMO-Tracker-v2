@@ -9,6 +9,14 @@ interface DetailHeroProps {
   status?: { label: string; colors: { bg: string; ink: string } } | null;
 }
 
+function isLightHex(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
 export default function DetailHero({ kicker, title, meta, accentColor, acronyms = [], status }: DetailHeroProps) {
   return (
     <div
@@ -117,8 +125,8 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
                   style={{
                     padding: "3px 9px",
                     borderRadius: "var(--radius-sm)",
-                    backgroundColor: acr.color ? `${acr.color}20` : "var(--accent-bg)",
-                    color: acr.color || "var(--accent)",
+                    backgroundColor: acr.color || "var(--accent-bg)",
+                    color: acr.color ? (isLightHex(acr.color) ? "#000000" : "#FFFFFF") : "var(--accent)",
                     fontSize: "12px",
                     fontWeight: 600,
                     letterSpacing: "0.04em",

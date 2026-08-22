@@ -630,7 +630,7 @@ export default function DirectoryPage() {
           {loading ? (
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
-            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+            <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: editingId ? "visible" : "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed" }}>
                 <colgroup>
                   <col style={{ width: "100px" }} />
@@ -706,9 +706,9 @@ export default function DirectoryPage() {
                             entry.module || "General"
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: editingId === entry.id ? "visible" : "hidden" }}>
                           {editingId === entry.id ? (
-                            <div style={{ width: "100%", boxSizing: "border-box" }}>
+                            <div style={{ width: "100%", boxSizing: "border-box", position: "relative" }}>
                               <ComboField
                                 key={`dev-edit-${entry.id}`}
                                 source={DEVELOPER_SOURCE}
@@ -722,9 +722,9 @@ export default function DirectoryPage() {
                             entry.developerAssigned || "—"
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: editingId === entry.id ? "visible" : "hidden" }}>
                           {editingId === entry.id ? (
-                            <div style={{ width: "100%", boxSizing: "border-box" }}>
+                            <div style={{ width: "100%", boxSizing: "border-box", position: "relative" }}>
                               <ComboField
                                 key={`own-edit-${entry.id}`}
                                 source={OWNER_SOURCE}

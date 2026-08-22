@@ -38,6 +38,7 @@ export async function createWorkStreamWithStages(params: {
   responsiblePerson?: string | null;
   firstStage?: string | null;
   changedBy?: string;
+  remarks?: string;
 }) {
   const templateStages = await prisma.configValue.findMany({
     where: { category: "flow_template", archived: false },
@@ -110,7 +111,7 @@ export async function createWorkStreamWithStages(params: {
       entryType: "bump",
       fieldName: resolvedStages[0]?.value ?? "—",
       newValue: holder,
-      note: params.task ?? undefined,
+      note: params.remarks ?? params.task ?? undefined,
       changedBy,
     });
   }

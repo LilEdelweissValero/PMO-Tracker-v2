@@ -524,7 +524,7 @@ export default function ProjectDetailPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["Timestamp", "Bump Msg", "Ball Holder", "Task"].map((h) => (
+                {["Timestamp", "Remarks", "Ball Holder", "Task"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -1145,9 +1145,12 @@ function WorkStreamCard({
                       <button
                         onClick={() => onOpenBumps(stage.name)}
                         title="View bumps for this stage"
-                        style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "0", fontFamily: "var(--font-sans)" }}
+                        style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "0", fontFamily: "var(--font-sans)", textAlign: "left" }}
                       >
-                        {lastBumped.toLocaleDateString()} {lastBumped.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.3 }}>
+                          <span>{lastBumped.toLocaleDateString()}</span>
+                          <span>{lastBumped.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}</span>
+                        </div>
                       </button>
                     ) : "—"}
                   </td>
