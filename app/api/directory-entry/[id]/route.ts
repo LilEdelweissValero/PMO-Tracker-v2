@@ -37,6 +37,7 @@ export async function PATCH(
       system,
       acronym: typeof body.acronym === "string" ? body.acronym.trim() || null : entry.acronym,
       color: typeof body.color === "string" ? body.color.trim() || null : entry.color,
+      link: typeof body.link === "string" ? body.link.trim() || null : entry.link,
       module: moduleName,
       developerAssigned: typeof body.developerAssigned === "string" ? body.developerAssigned.trim() || null : entry.developerAssigned,
       systemOwnerName: typeof body.systemOwnerName === "string" ? body.systemOwnerName.trim() || null : entry.systemOwnerName,

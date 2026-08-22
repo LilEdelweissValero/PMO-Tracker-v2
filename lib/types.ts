@@ -17,8 +17,7 @@ export interface ProjectCreate {
   scopeDescription?: string;
   references?: ReferenceLink[];
   initiatedBy?: string;
-  requestedByName?: string;
-  requestedByDept?: string;
+  projectOwner?: string;
   systemName?: string;
   specificModule?: string;
   systemOwnerName?: string;
@@ -83,6 +82,7 @@ export interface SystemModuleEntry {
   system: string;
   acronym: string | null;
   color: string | null;
+  link: string | null;
   module: string | null;
   developerAssigned: string | null;
   systemOwnerName: string | null;
@@ -96,6 +96,7 @@ export interface SystemAffected {
   system: string;
   acronym: string | null;
   color: string | null;
+  link: string | null;
   module: string | null;
   developerAssigned: string | null;
   systemOwnerName: string | null;
@@ -154,8 +155,7 @@ export interface ProjectWithWorkStreams {
   scopeDescription: string | null;
   references: ReferenceLink[];
   initiatedBy: string | null;
-  requestedByName: string | null;
-  requestedByDept: string | null;
+  projectOwner: string | null;
   systemName: string | null;
   specificModule: string | null;
   systemOwnerName: string | null;

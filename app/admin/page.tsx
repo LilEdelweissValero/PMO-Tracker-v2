@@ -65,8 +65,6 @@ export default function AdminPage() {
     { key: "request_type", label: "Request Type" },
     { key: "initiated_by", label: "Initiated By" },
     { key: "ball_groups", label: "Ball Groups" },
-    { key: "requested_by_name", label: "Requested By Name" },
-    { key: "requested_by_dept", label: "Requested By Dept" },
     { key: "pm_officer", label: "PM Officer" },
   ];
 
@@ -259,12 +257,6 @@ export default function AdminPage() {
           ],
           ball_groups: [
             { from: "Ball Groups", to: "Bump Modal, Ball View", desc: "Group names appear in bump dialogs and ball view grouping. Acronyms are used for concise display in dashboard tables and stage views." },
-          ],
-          requested_by_name: [
-            { from: "Requested By Name", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
-          ],
-          requested_by_dept: [
-            { from: "Requested By Dept", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },
           ],
           pm_officer: [
             { from: "PM Officer", to: "Project Forms", desc: "Autocomplete options. New values are added on-the-fly when typed in project forms." },

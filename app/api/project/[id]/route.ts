@@ -89,7 +89,7 @@ export async function PATCH(
 
   const trackedFields = [
     "projectId", "name", "priority", "scopeDescription", "initiatedBy",
-    "requestedByName", "requestedByDept", "systemName", "specificModule",
+    "projectOwner", "systemName", "specificModule",
     "systemOwnerName", "systemOwnerDept", "requestType", "pmOfficer",
     "remarks", "signoffStatus",
   ];
@@ -148,8 +148,7 @@ export async function PATCH(
       scopeDescription: body.scopeDescription !== undefined ? body.scopeDescription : existing.scopeDescription,
       references: body.references !== undefined ? body.references : existing.references,
       initiatedBy: body.initiatedBy !== undefined ? body.initiatedBy : existing.initiatedBy,
-      requestedByName: body.requestedByName !== undefined ? body.requestedByName : existing.requestedByName,
-      requestedByDept: body.requestedByDept !== undefined ? body.requestedByDept : existing.requestedByDept,
+      projectOwner: body.projectOwner !== undefined ? body.projectOwner : existing.projectOwner,
       systemName: body.systemName !== undefined ? body.systemName : existing.systemName,
       specificModule: body.specificModule !== undefined ? body.specificModule : existing.specificModule,
       systemOwnerName: body.systemOwnerName !== undefined ? body.systemOwnerName : existing.systemOwnerName,

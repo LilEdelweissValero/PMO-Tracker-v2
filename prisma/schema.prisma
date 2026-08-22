@@ -18,8 +18,7 @@ model Project {
   scopeDescription String?   @map("scope_description")
   references       Json      @default("[]")
   initiatedBy      String?   @map("initiated_by")
-  requestedByName  String?   @map("requested_by_name")
-  requestedByDept  String?   @map("requested_by_dept")
+  projectOwner     String?   @map("project_owner")
   systemName       String?   @map("system_name")
   specificModule   String?   @map("specific_module")
   systemOwnerName  String?   @map("system_owner_name")
@@ -125,6 +124,7 @@ model SystemModuleEntry {
   system            String
   acronym           String?
   color             String?
+  link              String?
   module            String?
   developerAssigned String?  @map("developer_assigned")
   systemOwnerName   String?  @map("system_owner_name")

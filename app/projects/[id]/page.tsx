@@ -305,7 +305,7 @@ export default function ProjectDetailPage() {
   const metaFields = [
     { label: "PM Officer", value: project.pmOfficer },
     { label: "Request Type", value: project.requestType },
-    { label: "Project Owner", value: project.requestedByName },
+    { label: "Project Owner", value: project.projectOwner },
   ];
 
   const systems = Array.isArray(project.systems) ? project.systems : [];
@@ -328,8 +328,7 @@ export default function ProjectDetailPage() {
           <FieldRow label="Priority" value={project.priority} onEdit={() => { playPrompt(); setEditingField("priority"); }} />
           <FieldRow label="Scope" value={project.scopeDescription} onEdit={() => { playPrompt(); setEditingField("scopeDescription"); }} multiline large />
           <FieldRow label="Initiated By" value={project.initiatedBy} onEdit={() => { playPrompt(); setEditingField("initiatedBy"); }} />
-          <FieldRow label="Project Owner" value={project.requestedByName} onEdit={() => { playPrompt(); setEditingField("requestedByName"); }} />
-          <FieldRow label="Business Unit" value={project.requestedByDept} onEdit={() => { playPrompt(); setEditingField("requestedByDept"); }} />
+          <FieldRow label="Project Owner" value={project.projectOwner} onEdit={() => { playPrompt(); setEditingField("projectOwner"); }} />
           <div style={{ marginTop: "var(--space-sm)" }}>
             <div className="label-caps" style={{ marginBottom: "4px", color: "var(--ink-tertiary)" }}>References</div>
             <LinkEditor
@@ -670,8 +669,7 @@ const FIELD_TYPE_MAP: Record<string, { type: string; configCategory?: string; so
   priority: { type: "combo", configCategory: "priority", strict: true },
   scopeDescription: { type: "textarea" },
   initiatedBy: { type: "combo", configCategory: "initiated_by", strict: true },
-  requestedByName: { type: "combo", configCategory: "requested_by_name" },
-  requestedByDept: { type: "combo", configCategory: "requested_by_dept" },
+  projectOwner: { type: "combo", source: { url: "/api/directory-personnel", valueKey: "name" } },
   requestType: { type: "combo", configCategory: "request_type", strict: true },
   pmOfficer: { type: "combo", configCategory: "pm_officer", strict: true },
   systemName: { type: "combo", source: { url: "/api/directory-entry", valueKey: "system" }, strict: true },
@@ -686,8 +684,7 @@ const FIELD_LABEL_MAP: Record<string, string> = {
   priority: "Priority",
   scopeDescription: "Scope Description",
   initiatedBy: "Initiated By",
-  requestedByName: "Project Owner",
-  requestedByDept: "Business Unit",
+  projectOwner: "Project Owner",
   requestType: "Request Type",
   pmOfficer: "PM Officer",
   systemName: "System Name",

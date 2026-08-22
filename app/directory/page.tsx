@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ComboField, { inputStyle } from "@/components/ComboField";
 import SortableTh from "@/components/SortableTh";
-import SaveOrderBar from "@/components/SaveOrderBar";
 import { playPing } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
 import { useColumnSort, type SortAccessor, type SortState } from "@/lib/useColumnSort";
@@ -29,7 +28,8 @@ const entryColumns: SortableColumn[] = [
   { key: "module", label: "Module" },
   { key: "developerAssigned", label: "Developer Assigned" },
   { key: "systemOwnerName", label: "System Owner (Name)" },
-  { key: "systemOwnerDept", label: "System Owner (Department)" },
+  { key: "systemOwnerDept", label: "System Owner (Dept)", sortable: false },
+  { key: "link", label: "Link" },
   { key: "actions", label: "Actions", sortable: false },
 ];
 
@@ -45,7 +45,7 @@ const entryAccessors: Record<string, SortAccessor<SystemModuleEntry>> = {
   module: (e) => e.module,
   developerAssigned: (e) => e.developerAssigned,
   systemOwnerName: (e) => e.systemOwnerName,
-  systemOwnerDept: (e) => e.systemOwnerDept,
+  link: (e) => e.link,
 };
 
 const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
@@ -68,20 +68,22 @@ export default function DirectoryPage() {
 
   const [newSystem, setNewSystem] = useState("");
   const [newAcronym, setNewAcronym] = useState("");
-  const [newColor, setNewColor] = useState("");
+  const [newColor, setNewColor] = useState("#000000");
   const [newModule, setNewModule] = useState("");
   const [newDeveloper, setNewDeveloper] = useState("");
   const [newOwnerName, setNewOwnerName] = useState("");
   const [newOwnerDept, setNewOwnerDept] = useState("");
+  const [newLink, setNewLink] = useState("");
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editSystem, setEditSystem] = useState("");
   const [editAcronym, setEditAcronym] = useState("");
-  const [editColor, setEditColor] = useState("");
+  const [editColor, setEditColor] = useState("#000000");
   const [editModule, setEditModule] = useState("");
   const [editDeveloper, setEditDeveloper] = useState("");
   const [editOwnerName, setEditOwnerName] = useState("");
   const [editOwnerDept, setEditOwnerDept] = useState("");
+  const [editLink, setEditLink] = useState("");
 
   const [newPersonGroup, setNewPersonGroup] = useState("");
   const [newPersonName, setNewPersonName] = useState("");
@@ -139,7 +141,7 @@ export default function DirectoryPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const [allProjects, setAllProjects] = useState<{ signoffStatus: string; systemOwnerName: string | null; requestedByName: string | null; workStreams: { assignedDeveloper: string | null }[] }[]>([]);
+  const [allProjects, setAllProjects] = useState<{ signoffStatus: string; systemOwnerName: string | null; projectOwner: string | null; workStreams: { assignedDeveloper: string | null }[] }[]>([]);
 
   useEffect(() => {
     if (tab !== "personnel") return;
@@ -158,7 +160,7 @@ export default function DirectoryPage() {
     for (const proj of allProjects) {
       const names = new Set<string>();
       if (proj.systemOwnerName) names.add(proj.systemOwnerName);
-      if (proj.requestedByName) names.add(proj.requestedByName);
+      if (proj.projectOwner) names.add(proj.projectOwner);
       for (const ws of proj.workStreams) {
         if (ws.assignedDeveloper) names.add(ws.assignedDeveloper);
       }
@@ -186,6 +188,9 @@ export default function DirectoryPage() {
 
   const addEntry = async () => {
     if (!newSystem.trim()) return;
+    const derivedDept = newOwnerName
+      ? (personnel.find((p) => p.name === newOwnerName && p.group === "Business Unit")?.department ?? "")
+      : "";
     const res = await fetch("/api/directory-entry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -193,10 +198,11 @@ export default function DirectoryPage() {
         system: newSystem.trim(),
         acronym: newAcronym.trim() || null,
         color: newColor.trim() || null,
+        link: newLink.trim() || null,
         module: newModule.trim() || null,
         developerAssigned: newDeveloper.trim() || null,
         systemOwnerName: newOwnerName.trim() || null,
-        systemOwnerDept: newOwnerDept.trim() || null,
+        systemOwnerDept: derivedDept || null,
       }),
     });
     if (!res.ok) {
@@ -206,17 +212,21 @@ export default function DirectoryPage() {
     }
     setNewSystem("");
     setNewAcronym("");
-    setNewColor("");
+    setNewColor("#000000");
     setNewModule("");
     setNewDeveloper("");
     setNewOwnerName("");
     setNewOwnerDept("");
+    setNewLink("");
     fetchAll();
     playPing();
     showToast("Entry added");
   };
 
   const updateEntry = async (id: number) => {
+    const derivedDept = editOwnerName
+      ? (personnel.find((p) => p.name === editOwnerName && p.group === "Business Unit")?.department ?? "")
+      : "";
     const res = await fetch(`/api/directory-entry/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -224,10 +234,11 @@ export default function DirectoryPage() {
         system: editSystem,
         acronym: editAcronym || null,
         color: editColor || null,
+        link: editLink || null,
         module: editModule || null,
         developerAssigned: editDeveloper || null,
         systemOwnerName: editOwnerName || null,
-        systemOwnerDept: editOwnerDept || null,
+        systemOwnerDept: derivedDept || null,
       }),
     });
     if (!res.ok) {
@@ -300,7 +311,7 @@ export default function DirectoryPage() {
     showToast("Entry deleted");
   };
 
-  const renderTableHeader = (cols: SortableColumn[], sortState: SortState | null, onToggle: (key: string) => void) => (
+  const renderTableHeader = (cols: SortableColumn[], sortState: SortState | null, onToggle: (key: string) => void, saving?: boolean, onSave?: () => void) => (
     <tr>
       {cols.map((col) => (
         <SortableTh
@@ -309,6 +320,29 @@ export default function DirectoryPage() {
           sort={sortState}
           sortKey={col.sortable === false ? undefined : col.key}
           onSort={col.sortable === false ? undefined : onToggle}
+          action={sortState?.key === col.key && onSave ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSave(); }}
+              disabled={saving}
+              style={{
+                padding: "1px 6px",
+                border: "1px solid currentColor",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor: "transparent",
+                color: "inherit",
+                cursor: saving ? "not-allowed" : "pointer",
+                fontSize: "9px",
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                fontFamily: "var(--font-sans)",
+                opacity: saving ? 0.5 : 1,
+                lineHeight: "14px",
+                marginLeft: "4px",
+              }}
+            >
+              {saving ? "..." : "SAVE"}
+            </button>
+          ) : undefined}
           style={{
             backgroundColor: "var(--ground-metric)",
             borderBottom: "1px solid var(--rule-strong)",
@@ -410,14 +444,9 @@ export default function DirectoryPage() {
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-              {personnelSort.sort ? (
-                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
-                  <SaveOrderBar saving={personnelSort.saving} error={personnelSort.saveError} onSave={personnelSort.saveOrder} />
-                </div>
-              ) : null}
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
-                  {renderTableHeader(personnelColumns, personnelSort.sort, personnelSort.toggleSort)}
+                  {renderTableHeader(personnelColumns, personnelSort.sort, personnelSort.toggleSort, personnelSort.saving, personnelSort.saveOrder)}
                 </thead>
                 <tbody>
                   {personnelSort.sortedRows.length === 0 ? (
@@ -569,8 +598,8 @@ export default function DirectoryPage() {
                 />
               </div>
               <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>System Owner (Dept)</span>
-                <input type="text" value={newOwnerDept} onChange={(e) => setNewOwnerDept(e.target.value)} style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Link</span>
+                <input type="text" value={newLink} onChange={(e) => setNewLink(e.target.value)} placeholder="https://..." style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
               </div>
               <button
                 onClick={addEntry}
@@ -596,14 +625,19 @@ export default function DirectoryPage() {
             <div style={{ fontSize: "13px", color: "var(--ink-tertiary)" }}>Loading...</div>
           ) : (
             <div style={{ backgroundColor: "var(--surface)", border: "1px solid var(--rule)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-              {entriesSort.sort ? (
-                <div style={{ padding: "var(--space-sm) var(--space-md)" }}>
-                  <SaveOrderBar saving={entriesSort.saving} error={entriesSort.saveError} onSave={entriesSort.saveOrder} />
-                </div>
-              ) : null}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "100px" }} />
+                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "130px" }} />
+                  <col style={{ width: "160px" }} />
+                  <col style={{ width: "160px" }} />
+                  <col style={{ width: "140px" }} />
+                  <col style={{ width: "120px" }} />
+                  <col style={{ width: "100px" }} />
+                </colgroup>
                 <thead>
-                  {renderTableHeader(entryColumns, entriesSort.sort, entriesSort.toggleSort)}
+                  {renderTableHeader(entryColumns, entriesSort.sort, entriesSort.toggleSort, entriesSort.saving, entriesSort.saveOrder)}
                 </thead>
                 <tbody>
                   {entriesSort.sortedRows.length === 0 ? (
@@ -615,11 +649,11 @@ export default function DirectoryPage() {
                   ) : (
                     entriesSort.sortedRows.map((entry) => (
                       <tr key={entry.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                        <td style={{ padding: "8px 10px" }}>
+                        <td style={{ padding: "8px 10px", overflow: "hidden" }}>
                           {editingId === entry.id ? (
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <input type="text" value={editAcronym} onChange={(e) => setEditAcronym(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "80px" }} />
-                              <input type="color" value={editColor || "#000000"} onChange={(e) => setEditColor(e.target.value)} style={{ width: "28px", height: "28px", padding: "1px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer" }} />
+                              <input type="text" value={editAcronym} onChange={(e) => setEditAcronym(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "60px", boxSizing: "border-box" }} />
+                              <input type="color" value={editColor || "#000000"} onChange={(e) => setEditColor(e.target.value)} style={{ width: "28px", height: "28px", padding: "1px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", cursor: "pointer", flexShrink: 0 }} />
                             </div>
                           ) : entry.acronym ? (
                             <span style={{
@@ -639,23 +673,34 @@ export default function DirectoryPage() {
                             <span style={{ color: "var(--ink-tertiary)" }}>—</span>
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px" }}>
+                        <td style={{ padding: "8px 10px", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
+                            <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
+                          ) : entry.link ? (
+                            <a
+                              href={entry.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+                            >
+                              {entry.system} <span style={{ fontSize: "10px", opacity: 0.7 }}>↗</span>
+                            </a>
                           ) : (
                             entry.system
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px" }}>
+                        <td style={{ padding: "8px 10px", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editModule} onChange={(e) => setEditModule(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none" }} />
+                            <input type="text" value={editModule} onChange={(e) => setEditModule(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
                           ) : (
-                            entry.module || "—"
+                            entry.module || "General"
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <div style={{ minWidth: "120px" }}>
+                            <div style={{ width: "100%", boxSizing: "border-box" }}>
                               <ComboField
                                 key={`dev-edit-${entry.id}`}
                                 source={DEVELOPER_SOURCE}
@@ -669,9 +714,9 @@ export default function DirectoryPage() {
                             entry.developerAssigned || "—"
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <div style={{ minWidth: "140px" }}>
+                            <div style={{ width: "100%", boxSizing: "border-box" }}>
                               <ComboField
                                 key={`own-edit-${entry.id}`}
                                 source={OWNER_SOURCE}
@@ -685,11 +730,18 @@ export default function DirectoryPage() {
                             entry.systemOwnerName || "—"
                           )}
                         </td>
-                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>
+                        <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
+                          {entry.systemOwnerDept || "—"}
+                        </td>
+                        <td style={{ padding: "8px 10px", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editOwnerDept} onChange={(e) => setEditOwnerDept(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }} />
+                            <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} placeholder="https://..." style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
+                          ) : entry.link ? (
+                            <a href={entry.link} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none", fontSize: "12px" }}>
+                              Open ↗
+                            </a>
                           ) : (
-                            entry.systemOwnerDept || "—"
+                            <span style={{ color: "var(--ink-tertiary)" }}>—</span>
                           )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
@@ -701,7 +753,7 @@ export default function DirectoryPage() {
                           ) : (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>
                               <button
-                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditAcronym(entry.acronym ?? ""); setEditColor(entry.color ?? ""); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); }}
+                                onClick={() => { setEditingId(entry.id); setEditSystem(entry.system); setEditAcronym(entry.acronym ?? ""); setEditColor(entry.color ?? "#000000"); setEditModule(entry.module ?? ""); setEditDeveloper(entry.developerAssigned ?? ""); setEditOwnerName(entry.systemOwnerName ?? ""); setEditOwnerDept(entry.systemOwnerDept ?? ""); setEditLink(entry.link ?? ""); }}
                                 style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px" }}
                               >
                                 Edit
