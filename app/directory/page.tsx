@@ -29,7 +29,6 @@ const entryColumns: SortableColumn[] = [
   { key: "developerAssigned", label: "Developer Assigned" },
   { key: "systemOwnerName", label: "System Owner (Name)" },
   { key: "systemOwnerDept", label: "System Owner (Dept)", sortable: false },
-  { key: "link", label: "Link" },
   { key: "actions", label: "Actions", sortable: false },
 ];
 
@@ -45,7 +44,6 @@ const entryAccessors: Record<string, SortAccessor<SystemModuleEntry>> = {
   module: (e) => e.module,
   developerAssigned: (e) => e.developerAssigned,
   systemOwnerName: (e) => e.systemOwnerName,
-  link: (e) => e.link,
 };
 
 const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
@@ -72,7 +70,7 @@ export default function DirectoryPage() {
   const [newModule, setNewModule] = useState("");
   const [newDeveloper, setNewDeveloper] = useState("");
   const [newOwnerName, setNewOwnerName] = useState("");
-  const [newOwnerDept, setNewOwnerDept] = useState("");
+  const [, setNewOwnerDept] = useState("");
   const [newLink, setNewLink] = useState("");
 
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -82,7 +80,7 @@ export default function DirectoryPage() {
   const [editModule, setEditModule] = useState("");
   const [editDeveloper, setEditDeveloper] = useState("");
   const [editOwnerName, setEditOwnerName] = useState("");
-  const [editOwnerDept, setEditOwnerDept] = useState("");
+  const [, setEditOwnerDept] = useState("");
   const [editLink, setEditLink] = useState("");
 
   const [newPersonGroup, setNewPersonGroup] = useState("");
@@ -197,7 +195,7 @@ export default function DirectoryPage() {
       body: JSON.stringify({
         system: newSystem.trim(),
         acronym: newAcronym.trim() || null,
-        color: newColor.trim() || null,
+        color: newColor.trim() || "#000000",
         link: newLink.trim() || null,
         module: newModule.trim() || null,
         developerAssigned: newDeveloper.trim() || null,
@@ -233,7 +231,7 @@ export default function DirectoryPage() {
       body: JSON.stringify({
         system: editSystem,
         acronym: editAcronym || null,
-        color: editColor || null,
+        color: editColor || "#000000",
         link: editLink || null,
         module: editModule || null,
         developerAssigned: editDeveloper || null,
@@ -628,12 +626,11 @@ export default function DirectoryPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed" }}>
                 <colgroup>
                   <col style={{ width: "100px" }} />
-                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "220px" }} />
                   <col style={{ width: "130px" }} />
                   <col style={{ width: "160px" }} />
                   <col style={{ width: "160px" }} />
                   <col style={{ width: "140px" }} />
-                  <col style={{ width: "120px" }} />
                   <col style={{ width: "100px" }} />
                 </colgroup>
                 <thead>
@@ -660,7 +657,7 @@ export default function DirectoryPage() {
                               display: "inline-block",
                               padding: "2px 8px",
                               borderRadius: "var(--radius-md)",
-                              backgroundColor: entry.color || "var(--ink-tertiary)",
+                              backgroundColor: entry.color || "#000000",
                               color: "#FFFFFF",
                               fontSize: "12px",
                               fontWeight: 600,
@@ -675,7 +672,10 @@ export default function DirectoryPage() {
                         </td>
                         <td style={{ padding: "8px 10px", overflow: "hidden" }}>
                           {editingId === entry.id ? (
-                            <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <input type="text" value={editSystem} onChange={(e) => setEditSystem(e.target.value)} style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
+                              <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} placeholder="https://..." style={{ padding: "3px 6px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "11px", outline: "none", width: "100%", boxSizing: "border-box", color: "var(--ink-tertiary)" }} />
+                            </div>
                           ) : entry.link ? (
                             <a
                               href={entry.link}
@@ -732,17 +732,6 @@ export default function DirectoryPage() {
                         </td>
                         <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
                           {entry.systemOwnerDept || "—"}
-                        </td>
-                        <td style={{ padding: "8px 10px", overflow: "hidden" }}>
-                          {editingId === entry.id ? (
-                            <input type="text" value={editLink} onChange={(e) => setEditLink(e.target.value)} placeholder="https://..." style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%", boxSizing: "border-box" }} />
-                          ) : entry.link ? (
-                            <a href={entry.link} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none", fontSize: "12px" }}>
-                              Open ↗
-                            </a>
-                          ) : (
-                            <span style={{ color: "var(--ink-tertiary)" }}>—</span>
-                          )}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (

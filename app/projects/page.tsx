@@ -84,7 +84,7 @@ export default function ProjectsPage() {
     const created = await res.json();
     playPing();
     showToast("Project created");
-    router.push(`/projects/${created.id}?openBump=1`);
+    router.push(`/projects/${created.id}`);
   };
 
   if (loading) {
@@ -245,6 +245,9 @@ export default function ProjectsPage() {
           { key: "pmOfficer", label: "PM Officer", type: "combo", configCategory: "pm_officer", required: true, strict: true },
           { key: "_divider1", label: "", type: "divider", dividerLabel: "Ball Setup" },
           { key: "currentBall", label: "Initial Ball Group", type: "combo", configCategory: "ball_groups", required: true, strict: true },
+          { key: "ballPerson", label: "Initial Ball Holder", type: "combo", source: { url: "/api/directory-personnel", valueKey: "name" }, filterBy: "currentBall", sourceFilterKey: "group", strict: true },
+          { key: "currentTask", label: "Current Task", required: true },
+          { key: "currentStage", label: "Current Stage", type: "combo", configCategory: "flow_template" },
         ]}
         onSubmit={handleCreate}
       />

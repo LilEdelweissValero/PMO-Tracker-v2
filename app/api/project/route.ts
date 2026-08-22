@@ -192,6 +192,9 @@ export async function POST(request: NextRequest) {
         projectId: project.id,
         name: a.name,
         currentBall: body.currentBall,
+        responsiblePerson: body.ballPerson || null,
+        task: body.currentTask || null,
+        firstStage: body.currentStage || null,
         changedBy: body.changedBy ?? "System",
       });
     }

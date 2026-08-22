@@ -36,12 +36,27 @@ export async function createWorkStreamWithStages(params: {
   currentBall?: string;
   task?: string | null;
   responsiblePerson?: string | null;
+  firstStage?: string | null;
   changedBy?: string;
 }) {
   const templateStages = await prisma.configValue.findMany({
     where: { category: "flow_template", archived: false },
     orderBy: { sortOrder: "asc" },
   });
+
+  const resolvedStages = (() => {
+    if (params.firstStage && params.firstStage.trim()) {
+      const match = templateStages.find((s) => s.value.toLowerCase() === params.firstStage!.trim().toLowerCase());
+      if (match) {
+      return templateStages.map((s) => ({ value: s.value, status: s.status, isCustom: false }));
+    }
+    return [
+      { value: params.firstStage.trim(), status: null, isCustom: true },
+      ...templateStages.map((s) => ({ value: s.value, status: s.status, isCustom: false })),
+    ];
+    }
+    return templateStages.map((s) => ({ value: s.value, status: s.status, isCustom: false }));
+  })();
 
   const workStream = await prisma.workStream.create({
     data: {
@@ -51,7 +66,7 @@ export async function createWorkStreamWithStages(params: {
       currentBall: params.currentBall ?? "Project Management Office",
       task: params.task ?? null,
       flowStages: {
-        create: templateStages.map((stage, i) => ({
+        create: resolvedStages.map((stage, i) => ({
           name: stage.value,
           orderIdx: i,
           responsibleGroup: i === 0 ? (params.currentBall ?? null) : null,
@@ -62,7 +77,7 @@ export async function createWorkStreamWithStages(params: {
   });
 
   const changedBy = params.changedBy ?? "System";
-  const initialStatus = templateStages[0]?.status ?? "Not Yet Started";
+  const initialStatus = resolvedStages[0]?.status ?? "Not Yet Started";
 
   await prisma.changeLog.create({
     data: {
@@ -93,7 +108,7 @@ export async function createWorkStreamWithStages(params: {
       workStreamId: workStream.id,
       projectId: params.projectId,
       entryType: "bump",
-      fieldName: templateStages[0]?.value ?? "—",
+      fieldName: resolvedStages[0]?.value ?? "—",
       newValue: holder,
       note: params.task ?? undefined,
       changedBy,

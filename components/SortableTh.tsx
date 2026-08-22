@@ -33,6 +33,9 @@ export default function SortableTh({ label, sort, onSort, sortKey, style, hideAr
         fontFamily: "var(--font-sans)",
         cursor: sortable ? "pointer" : "default",
         userSelect: "none",
+        lineHeight: "36px",
+        height: "36px",
+        verticalAlign: "middle",
         ...style,
       }}
     >

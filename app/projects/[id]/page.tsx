@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   DndContext,
@@ -29,9 +29,7 @@ import type { TemplateStage } from "@/lib/feature";
 import { useFlowTemplate } from "@/lib/useFlowTemplate";
 import { playPing, playPrompt } from "@/lib/sound";
 import { showToast } from "@/components/Toast";
-import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, DirectoryPersonnel, FormValue } from "@/lib/types";
-
-const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Business Unit"];
+import type { ProjectWithWorkStreams, WorkStreamWithStages, ReferenceLink, ChangeLogEntry, FormValue } from "@/lib/types";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -43,16 +41,13 @@ export default function ProjectDetailPage() {
   const [showAddWorkStream, setShowAddWorkStream] = useState(false);
   const [showAddSystem, setShowAddSystem] = useState(false);
   const [systemsTableHovered, setSystemsTableHovered] = useState(false);
-  const [ballGroups, setBallGroups] = useState<string[]>(FALLBACK_BALL_GROUPS);
   const [ballGroupAcronymMap, setBallGroupAcronymMap] = useState<Map<string, string>>(new Map());
-  const [units, setUnits] = useState<DirectoryPersonnel[]>([]);
   const [bumpWsId, setBumpWsId] = useState<number | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectStatuses, setProjectStatuses] = useState<{ value: string }[]>([]);
-  const autoBumpOpened = useRef(false);
   const templateStages = useFlowTemplate();
 
   useEffect(() => {
@@ -62,16 +57,8 @@ export default function ProjectDetailPage() {
       .then((data) => {
         if (!cancelled) {
           const configData = data as { value: string; acronym?: string | null }[];
-          const groups = configData.map((c) => c.value).filter((v) => v.trim());
-          if (groups.length) setBallGroups(groups);
           setBallGroupAcronymMap(new Map(configData.filter((c) => c.acronym).map((c) => [c.value, c.acronym!])));
         }
-      })
-      .catch(() => {});
-    fetch("/api/directory-personnel")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled) setUnits(data as DirectoryPersonnel[]);
       })
       .catch(() => {});
     fetch("/api/config-value?category=project_status")
@@ -102,17 +89,6 @@ export default function ProjectDetailPage() {
               } as Parameters<typeof buildWorkStreamWithDerived>[0], templateStages)
             ),
           };
-          const searchParams =
-            typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-          const openBump = searchParams !== null && searchParams.get("openBump") === "1";
-          const wsParam = Number(searchParams?.get("ws"));
-          const targetWs =
-            enriched.workStreams.find((w: { id: number }) => w.id === wsParam) ?? enriched.workStreams[0];
-          if (openBump && !autoBumpOpened.current && targetWs) {
-            autoBumpOpened.current = true;
-            setBumpWsId(targetWs.id);
-            window.history.replaceState(null, "", `/projects/${projectId}`);
-          }
           setProject(enriched);
           setLoading(false);
         }
@@ -424,9 +400,7 @@ export default function ProjectDetailPage() {
           <WorkStreamCard
             key={ws.id}
             ws={ws}
-            ballGroups={ballGroups}
             ballGroupAcronymMap={ballGroupAcronymMap}
-            units={units}
             templateStages={templateStages}
             projectStatuses={projectStatuses}
             onUpdateName={(name) => updateWorkStream(ws.id, { name })}
@@ -813,9 +787,7 @@ function FieldRow({ label, value, onEdit, multiline, large }: { label: string; v
 
 function WorkStreamCard({
   ws,
-  ballGroups,
   ballGroupAcronymMap,
-  units,
   templateStages,
   projectStatuses,
   onUpdateName,
@@ -828,9 +800,7 @@ function WorkStreamCard({
   onOpenBumps,
 }: {
   ws: WorkStreamWithStages;
-  ballGroups: string[];
   ballGroupAcronymMap: Map<string, string>;
-  units: DirectoryPersonnel[];
   templateStages: TemplateStage[];
   projectStatuses: { value: string }[];
   onUpdateName: (name: string) => void;
@@ -853,14 +823,7 @@ function WorkStreamCard({
 
   const sortedStages = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
   const latestBump = ws.latestBump ?? null;
-  const bumpMsg = latestBump?.note || null;
   const lastBumped = latestBump ? (latestBump.bumpDate ? new Date(latestBump.bumpDate) : new Date(latestBump.changedAt)) : null;
-
-
-  const namesForGroup = (group: string) =>
-    units
-      .filter((u) => u.group.toLowerCase() === group.toLowerCase())
-      .map((u) => u.name);
 
   const commitName = () => {
     const trimmed = nameValue.trim();
@@ -990,12 +953,6 @@ function WorkStreamCard({
       </div>
 
 
-      {ws.task && (
-        <div style={{ fontSize: "12px", color: "var(--ink-secondary)", marginBottom: "var(--space-sm)" }}>
-          <span style={{ fontWeight: 600 }}>Task:</span> {ws.task}
-        </div>
-      )}
-
       <div
         style={{ overflowX: "auto" }}
         onMouseEnter={() => setStagesTableHovered(true)}
@@ -1005,7 +962,7 @@ function WorkStreamCard({
           <thead>
             <tr>
               <th style={{ width: "20px", backgroundColor: "var(--ground-metric)", borderBottom: "1px solid var(--rule-strong)" }} />
-              {["Stage", "Planned", "Completion", "Δ", "Responsible", "Bump Msg", "Last Bumped"].map((h) => (
+              {["Stage", "Planned", "Completion", "Δ", "Responsible", "Current Task", "Last Bumped"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -1037,7 +994,7 @@ function WorkStreamCard({
                 <SortableContext items={sortedStages.map((s) => String(s.id))} strategy={verticalListSortingStrategy}>
                   {sortedStages.map((stage) => {
                     const isCurrentStageRow = ws.currentStage?.id === stage.id;
-                    const showBump = isCurrentStageRow && (bumpMsg || lastBumped);
+                    const showBump = isCurrentStageRow && lastBumped;
                     return (
                     <SortableRow key={stage.id} id={String(stage.id)}>
                       <td style={{ padding: "6px 8px", fontWeight: stage.completionDate ? 600 : 400 }}>
@@ -1150,7 +1107,7 @@ function WorkStreamCard({
                     </div>
                   </td>
                   <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {showBump ? (bumpMsg || "—") : "—"}
+                    {ws.task || "—"}
                   </td>
                   <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
                     {showBump && lastBumped ? (
@@ -1159,7 +1116,7 @@ function WorkStreamCard({
                         title="View all bumps"
                         style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "0", fontFamily: "var(--font-sans)" }}
                       >
-                        {lastBumped.toLocaleDateString()}
+                        {lastBumped.toLocaleDateString()} {lastBumped.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
                       </button>
                     ) : "—"}
                   </td>
