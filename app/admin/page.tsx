@@ -470,8 +470,8 @@ export default function AdminPage() {
                             )}
                           </td>
                         )}
-                        <td style={{ padding: "8px 10px" }}>
-                          {isStageTemplate && (
+                        {isStageTemplate && (
+                          <td style={{ padding: "8px 10px" }}>
                             <select
                               value={item.status ?? ""}
                               onChange={(e) => updateStatus(item.id, e.target.value)}
@@ -490,8 +490,8 @@ export default function AdminPage() {
                                 <option key={s.id} value={s.value}>{s.value}</option>
                               ))}
                             </select>
-                          )}
-                        </td>
+                          </td>
+                        )}
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === item.id ? (
                             <div style={{ display: "flex", gap: "var(--space-xs)" }}>

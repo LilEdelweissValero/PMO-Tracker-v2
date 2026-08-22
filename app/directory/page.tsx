@@ -251,11 +251,12 @@ export default function DirectoryPage() {
   const addPerson = async () => {
     const group = (newPersonGroup || unitGroups[0] || "").trim();
     const name = newPersonName.trim();
-    if (!group || !name) return;
+    const department = newPersonDept.trim();
+    if (!group || !name || !department) return;
     const res = await fetch("/api/directory-personnel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group, name, department: newPersonDept.trim() || null }),
+      body: JSON.stringify({ group, name, department }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -271,10 +272,15 @@ export default function DirectoryPage() {
   };
 
   const updatePerson = async (id: number) => {
+    const department = editPersonDept.trim();
+    if (!department) {
+      showToast("Department is required");
+      return;
+    }
     const res = await fetch(`/api/directory-personnel/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: editPersonGroup, name: editPersonName, department: editPersonDept || null }),
+      body: JSON.stringify({ group: editPersonGroup, name: editPersonName, department }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -371,7 +377,7 @@ export default function DirectoryPage() {
                 />
               </div>
               <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Department</span>
+                <span className="label-caps" style={{ color: "var(--ink-tertiary)" }}>Department *</span>
                 <input
                   type="text"
                   value={newPersonDept}
@@ -382,17 +388,17 @@ export default function DirectoryPage() {
               </div>
               <button
                 onClick={addPerson}
-                disabled={!newPersonName.trim()}
+                disabled={!newPersonName.trim() || !newPersonDept.trim()}
                 style={{
                   padding: "7px 12px",
                   border: "none",
                   borderRadius: "var(--radius-md)",
                   backgroundColor: "var(--accent)",
                   color: "#FFFFFF",
-                  cursor: newPersonName.trim() ? "pointer" : "not-allowed",
+                  cursor: newPersonName.trim() && newPersonDept.trim() ? "pointer" : "not-allowed",
                   fontSize: "13px",
                   fontFamily: "var(--font-sans)",
-                  opacity: newPersonName.trim() ? 1 : 0.5,
+                  opacity: newPersonName.trim() && newPersonDept.trim() ? 1 : 0.5,
                 }}
               >
                 Add
@@ -460,8 +466,10 @@ export default function DirectoryPage() {
                                 onChange={(e) => setEditPersonDept(e.target.value)}
                                 style={{ padding: "4px 8px", border: "1px solid var(--rule)", borderRadius: "var(--radius-md)", fontSize: "13px", outline: "none", width: "100%" }}
                               />
+                            ) : item.department ? (
+                              item.department
                             ) : (
-                              item.department || "—"
+                              <span style={{ color: "var(--health-atrisk-ink)", fontSize: "11px", fontWeight: 600 }}>REQUIRED</span>
                             )}
                           </td>
                           <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", fontSize: "12px" }}>

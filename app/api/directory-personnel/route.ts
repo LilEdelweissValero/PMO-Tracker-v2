@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const group = typeof body.group === "string" ? body.group.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
-  const department = typeof body.department === "string" ? body.department.trim() || null : null;
+  const department = typeof body.department === "string" ? body.department.trim() : "";
 
-  if (!group || !name) {
-    return NextResponse.json({ error: "group and name are required" }, { status: 400 });
+  if (!group || !name || !department) {
+    return NextResponse.json({ error: "group, name, and department are required" }, { status: 400 });
   }
 
   const existing = await prisma.directoryPersonnel.findFirst({

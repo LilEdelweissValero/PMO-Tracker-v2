@@ -19,10 +19,10 @@ export async function PATCH(
 
   const group = typeof body.group === "string" ? body.group.trim() : existing.group;
   const name = typeof body.name === "string" ? body.name.trim() : existing.name;
-  const department = typeof body.department === "string" ? body.department.trim() || null : existing.department;
+  const department = typeof body.department === "string" ? body.department.trim() : existing.department;
 
-  if (!group || !name) {
-    return NextResponse.json({ error: "group and name are required" }, { status: 400 });
+  if (!group || !name || !department) {
+    return NextResponse.json({ error: "group, name, and department are required" }, { status: 400 });
   }
 
   const conflict = await prisma.directoryPersonnel.findFirst({
