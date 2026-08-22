@@ -110,6 +110,7 @@ export async function createWorkStreamWithStages(params: {
       projectId: params.projectId,
       entryType: "bump",
       fieldName: resolvedStages[0]?.value ?? "—",
+      oldValue: params.task || undefined,
       newValue: holder,
       note: params.remarks ?? params.task ?? undefined,
       changedBy,

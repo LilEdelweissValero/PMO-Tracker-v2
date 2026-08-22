@@ -275,51 +275,12 @@ export default function BumpModal({ open, projectId, workStreamIds, onClose, onS
               body: JSON.stringify({ currentBall: ballGroup }),
             });
           }
-          const curStage = ws.currentStage;
 
-          if (newTaskName.trim() && curStage) {
-            await fetch(`/api/flow-stage/${curStage.id}`, {
+          if (newTaskName.trim()) {
+            await fetch(`/api/work-stream/${ws.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ completionDate: isoDate }),
-            });
-
-            const createRes = await fetch("/api/flow-stage", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                workStreamId: ws.id,
-                name: newTaskName.trim(),
-                responsibleGroup: ballGroup,
-                responsiblePerson: ballPerson || null,
-              }),
-            });
-            const createdStage = await createRes.json();
-
-            const sorted = [...ws.flowStages].sort((a, b) => a.orderIdx - b.orderIdx);
-            const completed = [...sorted.filter((s) => s.completionDate), curStage];
-            const pending = [createdStage, ...sorted.filter((s) => !s.completionDate && s.id !== curStage.id)];
-            const newOrder = [...completed, ...pending];
-            const idxMap = new Map(newOrder.map((s, i) => [s.id, i]));
-            await Promise.all(
-              newOrder
-                .filter((s) => s.orderIdx !== idxMap.get(s.id))
-                .map((s) =>
-                  fetch(`/api/flow-stage/${s.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ orderIdx: idxMap.get(s.id) }),
-                  })
-                )
-            );
-          } else if (curStage) {
-            await fetch(`/api/flow-stage/${curStage.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                responsibleGroup: ballGroup,
-                responsiblePerson: ballPerson || null,
-              }),
+              body: JSON.stringify({ task: newTaskName.trim() }),
             });
           }
         }
