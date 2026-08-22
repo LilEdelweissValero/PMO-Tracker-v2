@@ -187,7 +187,7 @@ export default function ComboField({
     commitValue(value);
   };
 
-  const isInvalidStrict = strict && value.trim() !== "" && !options.some((o) => o.value === value.trim());
+  const isInvalidStrict = !loading && strict && value.trim() !== "" && !options.some((o) => o.value === value.trim());
 
   if (loading) {
     return <input type="text" value="" readOnly style={inputStyle} placeholder="Loading..." />;

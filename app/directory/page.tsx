@@ -51,6 +51,14 @@ const FALLBACK_BALL_GROUPS = ["Project Management Office", "Developers", "Busine
 const DEVELOPER_SOURCE = { url: "/api/directory-personnel?group=Developers", valueKey: "name" };
 const OWNER_SOURCE = { url: `/api/directory-personnel?group=${encodeURIComponent("Business Unit")}`, valueKey: "name" };
 
+function isLightHex(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
 interface ProjectInvolvement {
   open: number;
   closed: number;
@@ -658,7 +666,7 @@ export default function DirectoryPage() {
                               padding: "2px 8px",
                               borderRadius: "var(--radius-md)",
                               backgroundColor: entry.color || "#000000",
-                              color: "#FFFFFF",
+                              color: isLightHex(entry.color || "#000000") ? "#000000" : "#FFFFFF",
                               fontSize: "12px",
                               fontWeight: 600,
                               fontFamily: "var(--font-sans)",
@@ -731,7 +739,10 @@ export default function DirectoryPage() {
                           )}
                         </td>
                         <td style={{ padding: "8px 10px", color: "var(--ink-secondary)", overflow: "hidden" }}>
-                          {entry.systemOwnerDept || "—"}
+                          {(() => {
+                            const ownerDept = personnel.find((p) => p.name === entry.systemOwnerName && p.group === "Business Unit")?.department ?? entry.systemOwnerDept;
+                            return ownerDept || "—";
+                          })()}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           {editingId === entry.id ? (

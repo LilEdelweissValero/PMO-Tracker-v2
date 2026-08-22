@@ -6,12 +6,14 @@ export async function GET(request: NextRequest) {
   const workStreamId = searchParams.get("workStreamId");
   const projectId = searchParams.get("projectId");
   const entryType = searchParams.get("entryType");
+  const fieldName = searchParams.get("fieldName");
   const asOf = searchParams.get("asOf");
 
   const where: Record<string, unknown> = {};
   if (workStreamId) where.workStreamId = parseInt(workStreamId);
   if (projectId) where.projectId = parseInt(projectId);
   if (entryType) where.entryType = entryType;
+  if (fieldName) where.fieldName = fieldName;
   if (asOf) where.changedAt = { lte: new Date(asOf) };
 
   const logs = await prisma.changeLog.findMany({

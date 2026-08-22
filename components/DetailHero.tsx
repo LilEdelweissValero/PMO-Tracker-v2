@@ -14,7 +14,7 @@ export default function DetailHero({ kicker, title, meta, accentColor, acronyms 
     <div
       style={{
         position: "sticky",
-        top: 0,
+        top: "44px",
         zIndex: 10,
         backgroundColor: "var(--background)",
       }}

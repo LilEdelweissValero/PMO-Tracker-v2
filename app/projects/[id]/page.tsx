@@ -45,6 +45,7 @@ export default function ProjectDetailPage() {
   const [bumpWsId, setBumpWsId] = useState<number | null>(null);
   const [bumpsWs, setBumpsWs] = useState<WorkStreamWithStages | null>(null);
   const [bumpsList, setBumpsList] = useState<ChangeLogEntry[] | null>(null);
+  const [bumpsStageName, setBumpsStageName] = useState<string | null>(null);
   const [addStageWsId, setAddStageWsId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [projectStatuses, setProjectStatuses] = useState<{ value: string }[]>([]);
@@ -193,10 +194,11 @@ export default function ProjectDetailPage() {
     refetch();
   };
 
-  const openBumpsModal = (ws: WorkStreamWithStages) => {
+  const openBumpsModal = (ws: WorkStreamWithStages, stageName: string) => {
     setBumpsWs(ws);
+    setBumpsStageName(stageName);
     setBumpsList(null);
-    fetch(`/api/change-log?workStreamId=${ws.id}&entryType=bump`)
+    fetch(`/api/change-log?workStreamId=${ws.id}&entryType=bump&fieldName=${encodeURIComponent(stageName)}`)
       .then((r) => r.json())
       .then((data) => setBumpsList(data as ChangeLogEntry[]))
       .catch(() => setBumpsList([]));
@@ -410,7 +412,7 @@ export default function ProjectDetailPage() {
             onDeleteStage={deleteStage}
             onAddStage={() => { playPrompt(); setAddStageWsId(ws.id); }}
             onBump={() => { playPrompt(); setBumpWsId(ws.id); }}
-            onOpenBumps={() => openBumpsModal(ws)}
+            onOpenBumps={(stageName) => openBumpsModal(ws, stageName)}
           />
         ))}
       </div>
@@ -494,14 +496,35 @@ export default function ProjectDetailPage() {
         onSaved={refetch}
       />
 
-      <Modal open={bumpsWs !== null} onClose={() => setBumpsWs(null)} title={`Bumps — ${bumpsWs?.name ?? ""}`} wide>
+      <Modal open={bumpsWs !== null} onClose={() => setBumpsWs(null)} wide>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
+          <span style={{ fontSize: "18px", fontWeight: 750, lineHeight: 1.2, fontFamily: "var(--font-sans)" }}>
+            Bumps — {bumpsWs?.name ?? ""}
+          </span>
+          {bumpsStageName && (
+            <span
+              style={{
+                padding: "3px 10px",
+                borderRadius: "var(--radius-sm)",
+                backgroundColor: "var(--accent-bg)",
+                color: "var(--accent)",
+                fontSize: "12px",
+                fontWeight: 600,
+                letterSpacing: "0.03em",
+                fontFamily: "var(--font-sans)",
+              }}
+            >
+              {bumpsStageName}
+            </span>
+          )}
+        </div>
       <div
         style={{ overflowX: "auto" }}
       >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr>
-                {["Date", "Bump Msg", "Ball Holder", "Stage", "Changed By"].map((h) => (
+                {["Timestamp", "Bump Msg", "Ball Holder", "Task"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -524,28 +547,36 @@ export default function ProjectDetailPage() {
             <tbody>
               {!bumpsList ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                  <td colSpan={4} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                     Loading...
                   </td>
                 </tr>
               ) : bumpsList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
+                  <td colSpan={4} style={{ padding: "var(--space-md)", color: "var(--ink-tertiary)", textAlign: "center" }}>
                     No bumps logged
                   </td>
                 </tr>
               ) : (
-                bumpsList.map((bump) => (
-                  <tr key={bump.id} style={{ borderBottom: "1px solid var(--rule)" }}>
-                    <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums" }}>
-                      {(bump.bumpDate ? new Date(bump.bumpDate) : new Date(bump.changedAt)).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.note || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.newValue || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.fieldName || "—"}</td>
-                    <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.changedBy || "—"}</td>
-                  </tr>
-                ))
+                bumpsList.map((bump) => {
+                  const holderRaw = bump.newValue || "";
+                  const holderParts = holderRaw.split(" - ");
+                  const holderGroup = holderParts[0] || "";
+                  const holderPerson = holderParts.slice(1).join(" - ");
+                  const holderAcronym = ballGroupAcronymMap.get(holderGroup) || holderGroup;
+                  const holderDisplay = holderPerson ? `${holderAcronym} - ${holderPerson}` : holderAcronym;
+                  const bumpTimestamp = bump.bumpDate ? new Date(bump.bumpDate) : new Date(bump.changedAt);
+                  return (
+                    <tr key={bump.id} style={{ borderBottom: "1px solid var(--rule)" }}>
+                      <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums" }}>
+                        {bumpTimestamp.toLocaleDateString()} {bumpTimestamp.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      </td>
+                      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.note || "—"}</td>
+                      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{holderDisplay || "—"}</td>
+                      <td style={{ padding: "8px 10px", color: "var(--ink-secondary)" }}>{bump.oldValue || "—"}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -810,7 +841,7 @@ function WorkStreamCard({
   onDeleteStage: (stageId: number) => void;
   onAddStage: () => void;
   onBump: () => void;
-  onOpenBumps: () => void;
+  onOpenBumps: (stageName: string) => void;
 }) {
   const stageStatus = templateStages.find((t) => t.name === ws.currentStage?.name)?.status ?? "";
   const stageColors = getStatusColorClass(stageStatus, projectStatuses);
@@ -1107,13 +1138,13 @@ function WorkStreamCard({
                     </div>
                   </td>
                   <td style={{ padding: "6px 8px", color: "var(--ink-secondary)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {ws.task || "—"}
+                    {isCurrentStageRow ? (ws.task || "—") : ""}
                   </td>
                   <td style={{ padding: "6px 8px", fontVariantNumeric: "tabular-nums" }}>
                     {showBump && lastBumped ? (
                       <button
-                        onClick={onOpenBumps}
-                        title="View all bumps"
+                        onClick={() => onOpenBumps(stage.name)}
+                        title="View bumps for this stage"
                         style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontSize: "12px", padding: "0", fontFamily: "var(--font-sans)" }}
                       >
                         {lastBumped.toLocaleDateString()} {lastBumped.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
